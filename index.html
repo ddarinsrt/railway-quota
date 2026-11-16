@@ -30,12 +30,21 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
     <h1 class="text-lg sm:text-xl font-semibold tracking-tight">🚆 จัดแบ่งโควตาการขนส่งทางรถไฟประจำวัน</h1>
     <p class="text-sm text-slate-400 mt-1">35 แคร่ต่อขบวน · บันทึกข้อมูลและสีล่าสุดอัตโนมัติ</p>
   </header>
+  <details class="sec no-print">
+    <summary class="cursor-pointer text-sm font-medium text-slate-600 select-none">⚙ ตั้งค่าโควตามาตรฐานประจำสัปดาห์ (ฐาน 15 ขบวน = 525 แคร่)</summary>
+    <div id="weekTbl"></div>
+  </details>
+  <section class="sec no-print">
+    <div class="lbl">วันในสัปดาห์</div>
+    <div id="days" class="flex flex-wrap gap-2"></div>
+    <div id="baseinfo" class="text-xs text-slate-400 mt-3"></div>
+  </section>
   <section class="sec no-print">
     <div class="flex justify-between items-baseline"><div class="lbl">สถานะขบวนรถ</div><div id="capinfo" class="text-sm text-slate-500"></div></div>
     <div id="trains" class="flex flex-wrap gap-2"></div>
   </section>
   <section class="sec no-print">
-    <div class="lbl">โควตาแคร่และสีประจำบริษัท</div>
+    <div class="flex justify-between items-baseline"><div class="lbl">โควตาแคร่และสีประจำบริษัท</div><div id="qnote" class="text-xs text-slate-400"></div></div>
     <div id="quota" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
     <div id="valid" class="mt-4 text-sm"></div>
   </section>
@@ -72,7 +81,15 @@ const IC={
 const ic=(n,c='w-4 h-4')=>`<svg class="${c} inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
 
 /* ---------- State + localStorage ---------- */
-let S={open:{},q:[140,140,140,105],st:0,sn:1,colors:DEF.slice()};
+const DAYS=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+const DEFWEEK=[[140,140,140,105],[175,105,140,105],[140,175,105,105],[105,140,140,140],[150,120,135,120],[160,130,120,115],[130,150,125,120]];
+function hamilton(w,T){
+  const B=w.reduce((a,b)=>a+b,0);if(!B||!T)return [0,0,0,0];
+  const base=w.map(x=>Math.floor(x*T/B)),fr=w.map((x,i)=>({i,r:(x*T)%B}));
+  const left=T-base.reduce((a,b)=>a+b,0);fr.sort((a,b)=>b.r-a.r||a.i-b.i);
+  for(let k=0;k<left;k++)base[fr[k].i]++;return base;
+}
+let S={open:{},q:[140,140,140,105],st:0,sn:1,colors:DEF.slice(),week:DEFWEEK.map(r=>r.slice()),day:(new Date().getDay()+6)%7,edited:false};
 TR.forEach(t=>S.open[t]=true);
 try{const x=JSON.parse(localStorage.getItem('rfqs_v2'));if(x&&x.q&&x.open)S=Object.assign(S,x);}catch(e){}
 
@@ -217,7 +234,7 @@ function clearRes(){RES=null;$('result').innerHTML='';}
 
 function renderTrains(){
   $('trains').innerHTML=TR.map(t=>`<button data-t="${t}" class="rounded-full border px-3 py-1 text-sm tabular-nums ${S.open[t]?'border-slate-300 text-slate-800 bg-white':'border-slate-100 text-slate-300 bg-slate-50 line-through'}"><i class="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle ${S.open[t]?'bg-emerald-500':'bg-slate-300'}"></i>${t}</button>`).join('');
-  const n=openList().length;$('capinfo').innerHTML=`เปิดเดิน <b>${n}</b> ขบวน · ความจุ <b>${n*CAP}</b> แคร่`;renderValid();
+  const n=openList().length;$('capinfo').innerHTML=`เปิดเดิน <b>${n}</b> ขบวน · ความจุ <b>${n*CAP}</b> แคร่`;renderValid();renderDays();
 }
 function renderValid(){
   const n=openList().length,cap=n*CAP,s=sums(),ok=n>0&&s===cap,v=$('valid');
@@ -231,10 +248,10 @@ function buildInputs(){
   $('st').innerHTML=$('sn').innerHTML=CO.map((c,i)=>`<option value="${i}">${c}</option>`).join('');
   $('st').value=S.st;$('sn').value=S.sn;$('sample').innerHTML=ic('dice')+' สุ่มข้อมูลทดสอบ';
 }
-$('trains').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.open[b.dataset.t]=!S.open[b.dataset.t];save();clearRes();renderTrains();};
+$('trains').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.open[b.dataset.t]=!S.open[b.dataset.t];rescale();save();clearRes();renderTrains();syncQuota();};
 $('quota').oninput=e=>{const d=e.target.dataset;
   if(d.c!==undefined){S.colors[d.c]=e.target.value;applyColors();save();return;}
-  if(d.q!==undefined){S.q[d.q]=Math.max(0,parseInt(e.target.value)||0);save();clearRes();renderValid();}};
+  if(d.q!==undefined){S.q[d.q]=Math.max(0,parseInt(e.target.value)||0);S.edited=true;save();clearRes();renderValid();updateQnote();}};
 $('st').onchange=e=>{S.st=+e.target.value;save();clearRes();};
 $('sn').onchange=e=>{S.sn=+e.target.value;save();clearRes();};
 $('sample').onclick=()=>{
@@ -243,7 +260,7 @@ $('sample').onclick=()=>{
   const tot=(15-k)*CAP,w=CO.map(()=>.5+Math.random()),ws=w.reduce((a,b)=>a+b,0);
   S.q=w.map(x=>Math.floor(tot*x/ws));S.q[Math.floor(Math.random()*4)]+=tot-sums();
   S.st=Math.floor(Math.random()*4);S.sn=Math.floor(Math.random()*4);
-  save();clearRes();buildInputs();renderTrains();
+  S.edited=true;save();clearRes();buildInputs();renderTrains();updateQnote();
 };
 $('go').onclick=()=>{RES=null;recompute(false);};
 function recompute(rand){
@@ -254,7 +271,7 @@ function recompute(rand){
     const vs=solve(ol.length,q,st,sn,ol.map(t=>locks[t]||null));
     go.textContent='จัดตารางการเดินรถ';renderValid();
     if(!vs){if(prev)flash('ไม่พบแผนที่เข้ากับขบวนที่ล็อกไว้');else $('result').innerHTML='<div class="sec text-sm text-red-600">ไม่พบแผนที่เป็นไปได้ กรุณาปรับโควตาหรือขบวนที่เปิดเดิน</div>';return;}
-    RES={vs,cur:0,ol,q,st,sn,locks};
+    RES={vs,cur:0,ol,q,st,sn,locks,day:prev?prev.day:S.day};
     if(rand&&vs.length>1)RES.cur=1+Math.floor(Math.random()*(vs.length-1));
     renderResult();
   },30);
@@ -266,8 +283,13 @@ function swapRows(i,j){
 }
 function moveRow(i,d){const L=RES.locks,ol=RES.ol;if(L[ol[i]])return;let j=i+d;while(j>=0&&j<ol.length&&L[ol[j]])j+=d;if(j>=0&&j<ol.length)swapRows(i,j);}
 
-const badge=(c,x)=>`<span class="inline-flex items-center gap-1.5 text-xs rounded-full px-2 py-0.5 text-slate-700" style="background:color-mix(in srgb,var(--c${c}) 12%,white)"><i class="inline-block w-1.5 h-1.5 rounded-full" style="background:var(--c${c})"></i>${CO[c]} ${x}</span>`;
+const badge=(c,x)=>`<span class="inline-flex items-center gap-1.5 text-xs rounded-full px-2 py-0.5 " style="background:color-mix(in srgb,var(--c${c}) 14%,white);color:color-mix(in srgb,var(--c${c}) 70%,black)"><i class="inline-block w-1.5 h-1.5 rounded-full" style="background:var(--c${c})"></i>${CO[c]} ${x}</span>`;
 
+function companySummary(R){
+  const T=R.ol.length*CAP;
+  return CO.map((name,c)=>{const g=R.gaps[c],full=R.rows.filter(r=>r[c]===CAP).length,mix=R.rows.filter(r=>r[c]>0&&r[c]<CAP).length;
+    return {c,name,q:R.q[c],full,mix,n:full+mix,pct:T?(R.q[c]/T*100).toFixed(2):'0.00',trains:g.idx.map(i=>R.ol[i]).join(', '),mg:g.mg};});
+}
 function renderResult(){
   const cv=RES.vs[RES.cur];
   Object.assign(RES,{rows:cv.rows},analyze(cv.rows,RES.ol,RES.q,RES.st,RES.sn,RES.locks));
@@ -278,13 +300,15 @@ function renderResult(){
     return `<div class="row flex items-center gap-3 py-2.5 border-b border-slate-100 ${lk?'bg-amber-50 border-l-2 border-l-amber-400 pl-2':''}" data-row="${i}" ${lk?'':'draggable="true"'}>
       <span class="no-print w-4 text-slate-300 ${lk?'':'cursor-grab'} select-none text-xs">${lk?'':'⋮⋮'}</span>
       <b class="w-11 text-sm tabular-nums shrink-0">${t}</b>
-      <div class="flex-1 min-w-0"><div class="flex h-1.5 rounded-full overflow-hidden bg-slate-100 gap-px">${r.map((x,c)=>x>0?`<div style="width:${x/CAP*100}%;background:var(--c${c})"></div>`:'').join('')}</div>
-        <div class="flex flex-wrap gap-1.5 mt-1.5">${r.map((x,c)=>x>0?badge(c,x):'').join('')}</div></div>
+      <div class="flex-1 min-w-0"><div class="flex flex-wrap items-center gap-1.5">${r.map((x,c)=>x>0?badge(c,x):'').filter(Boolean).join('<span class="text-slate-300 text-xs">|</span>')}</div></div>
       <span class="text-xs text-slate-400 w-10 text-right shrink-0">${k>1?'ผสม':'เดี่ยว'}</span>
       <div class="no-print flex shrink-0"><button class="ib" data-a="up" data-i="${i}" title="เลื่อนขึ้น">${ic('up')}</button><button class="ib" data-a="down" data-i="${i}" title="เลื่อนลง">${ic('down')}</button>
         <button class="ib ${lk?'!text-amber-500':''}" data-a="lock" data-i="${i}" title="${lk?'ปลดล็อก':'ล็อกขบวนนี้'}">${ic(lk?'lock':'unlock')}</button></div></div>`;}).join('');
-  const gap=R.gaps.filter(g=>g.idx.length).map(g=>`<tr class="border-b border-slate-100"><td class="py-2 pr-3 whitespace-nowrap"><i class="inline-block w-2 h-2 rounded-full mr-1.5" style="background:var(--c${g.c})"></i>${CO[g.c]}</td>
-    <td class="py-2 pr-3 text-slate-500">${g.idx.map(i=>R.ol[i]).join(', ')}</td><td class="py-2 text-right whitespace-nowrap">${g.mg||'-'}</td></tr>`).join('');
+  const T=R.ol.length*CAP,cs=companySummary(R);
+  const gap=cs.map(x=>`<tr class="border-b border-slate-100 align-top"><td class="py-2 pr-3 whitespace-nowrap"><i class="inline-block w-2 h-2 rounded-full mr-1.5" style="background:var(--c${x.c})"></i>${x.name}</td>
+    <td class="py-2 pr-3 whitespace-nowrap">${x.q} แคร่</td><td class="py-2 pr-3 whitespace-nowrap">${x.n} ขบวน${x.mix?` <span class="text-slate-400">(${x.full} เต็ม + ${x.mix} ผสม)</span>`:''}</td>
+    <td class="py-2 pr-3">${x.pct}%</td><td class="py-2 pr-3 text-slate-500">${x.trains||'-'}</td><td class="py-2 text-right">${x.mg||'-'}</td></tr>`).join('')
+    +`<tr class="text-slate-500"><td class="pt-2 pr-3">รวม</td><td class="pt-2 pr-3">${T} แคร่</td><td class="pt-2 pr-3">${R.ol.length} ขบวน</td><td class="pt-2 pr-3">100%</td><td></td><td></td></tr>`;
   const chk=R.checks.map(c=>`<div class="flex gap-3 py-2 text-sm"><span class="${c.ok?'text-emerald-500':'text-red-500'} mt-0.5">${ic(c.ok?'check':'warn')}</span><div><div>${c.t}</div><div class="text-slate-400 text-xs">${c.d}</div></div></div>`).join('');
   $('result').innerHTML=`<div class="space-y-6">
    <section class="sec">
@@ -294,7 +318,7 @@ function renderResult(){
        <span class="flex-1"></span><button class="btn" data-a="line">${ic('copy')} คัดลอกสรุปส่ง LINE</button><button class="btn" data-a="csv">${ic('dl')} Export CSV</button><button class="btn" data-a="print">${ic('print')}</button></div>
      <div id="plan">${list}</div>
      <div class="no-print text-xs text-slate-300 mt-2">ลากแถวหรือกด ▲▼ เพื่อสลับตำแหน่ง · ขบวนที่ล็อกเลื่อนไม่ได้</div></section>
-   <section class="sec"><div class="lbl">ช่วงห่างของแต่ละบริษัท</div><table class="w-full text-sm"><thead class="text-xs text-slate-400"><tr><th class="text-left font-normal pb-1">บริษัท</th><th class="text-left font-normal pb-1">ขบวนที่ได้</th><th class="text-right font-normal pb-1">ห่างสูงสุด</th></tr></thead><tbody>${gap}</tbody></table></section>
+   <section class="sec"><div class="lbl">สรุปโควตาและสัดส่วนรายบริษัท · วัน${DAYS[R.day]}</div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-xs text-slate-400"><tr><th class="text-left font-normal pb-1">บริษัท</th><th class="text-left font-normal pb-1">โควตา</th><th class="text-left font-normal pb-1">ขบวนที่ลง</th><th class="text-left font-normal pb-1">สัดส่วน</th><th class="text-left font-normal pb-1">เลขขบวน</th><th class="text-right font-normal pb-1">ห่างสูงสุด</th></tr></thead><tbody>${gap}</tbody></table></div></section>
    <section class="sec"><div class="lbl">ตรวจสอบเงื่อนไข</div>${chk}</section></div>`;
 }
 $('result').onclick=e=>{const b=e.target.closest('[data-a]');if(!b||!RES)return;const a=b.dataset.a,i=+b.dataset.i;
@@ -318,13 +342,14 @@ $('result').ondragend=()=>{DRAG=null;};
 
 function lineText(){
   const d=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
-  let s=`🚆 แผนจัดสรรแคร่ ${d}\n`;
+  let s=`🚆 แผนจัดสรรแคร่ วัน${DAYS[RES.day]} ${d}\n`;
   TR.forEach(t=>{const i=RES.ol.indexOf(t);s+=i<0?`${t}: งดเดิน\n`:`${t}: `+RES.rows[i].map((x,c)=>x?`${CO[c]} ${x}`:'').filter(Boolean).join(' + ')+'\n';});
-  return s+'\nรวม: '+CO.map((c,i)=>`${c} ${RES.q[i]}`).join(' | ');
+  return s+`\nสรุปสัดส่วน (${RES.ol.length} ขบวน = ${RES.ol.length*CAP} แคร่)\n`+companySummary(RES).map(x=>`${x.name} ${x.q} แคร่ (${x.pct}%) · ${x.n} ขบวน`).join('\n');
 }
 function downloadCsv(){
   const L=['ขบวน,สถานะ,ประเภท,'+CO.join(',')+',รวม'];
   TR.forEach(t=>{const i=RES.ol.indexOf(t);if(i<0)L.push(`${t},งดเดิน,-,0,0,0,0,0`);else{const r=RES.rows[i];L.push(`${t},เปิดเดิน,${nz(r)>1?'ผสม':'เดี่ยว'},${r.join(',')},${CAP}`);}});
+  L.push('');L.push('บริษัท,โควตา(แคร่),ขบวน,สัดส่วน(%),เลขขบวน,Max Gap');companySummary(RES).forEach(x=>L.push([x.name,x.q,x.n,x.pct,'"'+x.trains+'"',x.mg].join(',')));
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+L.join('\n')],{type:'text/csv;charset=utf-8'}));
   a.download='railway-plan.csv';document.body.appendChild(a);a.click();a.remove();
 }
@@ -333,7 +358,31 @@ function copy(t,m){
     const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();
     try{document.execCommand('copy')}catch(e){}a.remove();}).then(()=>flash(m));
 }
-applyColors();buildInputs();renderTrains();
+
+const rescale=()=>{S.q=hamilton(S.week[S.day],openList().length*CAP);S.edited=false;};
+function updateQnote(){$('qnote').innerHTML=S.edited?'แก้ไขเอง · <button class="underline" id="qreset">คืนค่าอัตโนมัติ</button>':'คำนวณอัตโนมัติ (Largest Remainder)';}
+function syncQuota(){document.querySelectorAll('[data-q]').forEach(el=>el.value=S.q[el.dataset.q]);updateQnote();renderValid();}
+$('qnote').onclick=e=>{if(e.target.id==='qreset'){rescale();save();clearRes();syncQuota();}};
+function renderDays(){
+  $('days').innerHTML=DAYS.map((d,i)=>`<button data-d="${i}" class="pill ${i===S.day?'on':''}">${d}</button>`).join('');
+  const w=S.week[S.day],B=w.reduce((a,b)=>a+b,0),n=openList().length;
+  $('baseinfo').textContent=B===0?'⚠ ยังไม่ได้ตั้งค่าโควตาฐานของวันนี้ (ตั้งค่าที่ส่วนตั้งค่าโควตามาตรฐาน)':`โควตาฐาน${DAYS[S.day]}: ${CO.map((c,i)=>`${c} ${w[i]}`).join(' · ')} = ${B} แคร่${B!==525?' (ไม่ใช่ 525)':''} → ปรับตามจริงเป็น ${n*CAP} แคร่`;
+}
+$('days').onclick=e=>{const b=e.target.closest('[data-d]');if(!b)return;S.day=+b.dataset.d;rescale();save();clearRes();renderDays();syncQuota();};
+function updateWeekSums(){DAYS.forEach((_,d)=>{const t=S.week[d].reduce((a,b)=>a+b,0),el=$('ws'+d);
+  if(el){el.textContent=t===525?'525 ✓':t+' ⚠';el.className='py-1.5 text-right whitespace-nowrap '+(t===525?'text-emerald-600':'text-red-600');}});}
+function renderWeek(){
+  $('weekTbl').innerHTML=`<div class="overflow-x-auto"><table class="w-full text-sm mt-4"><thead class="text-xs text-slate-400"><tr><th class="text-left font-normal pb-2">วัน</th>${CO.map((c,i)=>`<th class="font-normal pb-2"><i class="inline-block w-2 h-2 rounded-full mr-1" style="background:var(--c${i})"></i>${c}</th>`).join('')}<th class="font-normal pb-2 text-right">รวม</th></tr></thead>
+  <tbody>${DAYS.map((d,di)=>`<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 whitespace-nowrap">${d}</td>${CO.map((c,ci)=>`<td class="px-1 py-1"><input data-w="${di},${ci}" type="number" min="0" inputmode="numeric" value="${S.week[di][ci]}" class="inp text-center" style="padding:5px 6px"></td>`).join('')}<td class="py-1.5 text-right whitespace-nowrap" id="ws${di}"></td></tr>`).join('')}</tbody></table></div>
+  <div class="mt-4 flex flex-wrap items-center gap-3"><button class="btn" id="loadDef">โหลดค่าเริ่มต้นตัวอย่าง</button><span class="text-xs text-slate-400">ค่าทั้งหมดบันทึกอัตโนมัติ</span></div>`;
+  updateWeekSums();
+}
+function weekChanged(){rescale();save();clearRes();updateWeekSums();renderDays();syncQuota();}
+$('weekTbl').oninput=e=>{const w=e.target.dataset.w;if(!w)return;const [d,c]=w.split(',').map(Number);S.week[d][c]=Math.max(0,parseInt(e.target.value)||0);weekChanged();};
+$('weekTbl').onclick=e=>{if(e.target.closest('#loadDef')){S.week=DEFWEEK.map(r=>r.slice());renderWeek();weekChanged();flash('โหลดค่าเริ่มต้นตัวอย่างแล้ว');}};
+
+if(!S.edited)rescale();
+applyColors();buildInputs();renderWeek();renderTrains();updateQnote();
 </script>
 </body>
 </html>
