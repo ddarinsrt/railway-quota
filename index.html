@@ -38,6 +38,7 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
     <div class="lbl">วันในสัปดาห์</div>
     <div id="days" class="flex flex-wrap gap-2"></div>
     <div id="baseinfo" class="text-xs text-slate-400 mt-3"></div>
+    <div id="rmethod" class="flex flex-wrap items-center gap-2 mt-3"></div>
   </section>
   <section class="sec no-print">
     <div class="flex justify-between items-baseline"><div class="lbl">สถานะขบวนรถ</div><div id="capinfo" class="text-sm text-slate-500"></div></div>
@@ -46,7 +47,8 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
   <section class="sec no-print">
     <div class="flex justify-between items-baseline"><div class="lbl">โควตาแคร่และสีประจำบริษัท</div><div id="qnote" class="text-xs text-slate-400"></div></div>
     <div id="quota" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
-    <div id="valid" class="mt-4 text-sm"></div>
+    <div id="rnote" class="mt-3 text-xs text-slate-400"></div>
+    <div id="valid" class="mt-2 text-sm"></div>
   </section>
   <section class="sec no-print">
     <div class="lbl">ลำดับเริ่มต้น</div>
@@ -83,13 +85,32 @@ const ic=(n,c='w-4 h-4')=>`<svg class="${c} inline-block" viewBox="0 0 24 24" fi
 /* ---------- State + localStorage ---------- */
 const DAYS=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
 const DEFWEEK=[[140,140,140,105],[175,105,140,105],[140,175,105,105],[105,140,140,140],[150,120,135,120],[160,130,120,115],[130,150,125,120]];
-function hamilton(w,T){
-  const B=w.reduce((a,b)=>a+b,0);if(!B||!T)return [0,0,0,0];
-  const base=w.map(x=>Math.floor(x*T/B)),fr=w.map((x,i)=>({i,r:(x*T)%B}));
-  const left=T-base.reduce((a,b)=>a+b,0);fr.sort((a,b)=>b.r-a.r||a.i-b.i);
-  for(let k=0;k<left;k++)base[fr[k].i]++;return base;
+function scale(w,T,m){
+  const B=w.reduce((a,b)=>a+b,0),adj=[];
+  if(!B||!T)return {q:[0,0,0,0],adj,raw:[0,0,0,0]};
+  const raw=w.map(x=>x*T/B),q=raw.map(x=>Math.round(x)),fr=i=>raw[i]-Math.floor(raw[i]);
+  let diff=T-q.reduce((a,b)=>a+b,0);
+  while(diff!==0){
+    let c;
+    if(diff>0){
+      const cand=[0,1,2,3].filter(i=>w[i]>0);
+      cand.sort(m===1?(a,b)=>(raw[b]-q[b])-(raw[a]-q[a])||a-b:(a,b)=>q[a]-q[b]||fr(b)-fr(a)||a-b);
+      c=cand[0];q[c]++;adj.push({c,d:1});diff--;
+    }else{
+      const cand=[0,1,2,3].filter(i=>q[i]>0);
+      cand.sort(m===1?(a,b)=>(raw[a]-q[a])-(raw[b]-q[b])||a-b:(a,b)=>q[b]-q[a]||fr(a)-fr(b)||a-b);
+      c=cand[0];q[c]--;adj.push({c,d:-1});diff++;
+    }
+  }
+  return {q,adj,raw};
 }
-let S={open:{},q:[140,140,140,105],st:0,sn:1,colors:DEF.slice(),week:DEFWEEK.map(r=>r.slice()),day:(new Date().getDay()+6)%7,edited:false};
+function roundNote(r,m){
+  if(!r.adj.length)return 'ปัดเศษแล้วผลรวมลงตัวพอดี ไม่ต้องปรับ';
+  const t={};r.adj.forEach(a=>{t[a.c]=(t[a.c]||0)+a.d});
+  const txt=Object.keys(t).map(c=>`${t[c]>0?'+':''}${t[c]} แคร่${t[c]>0?'ให้':'จาก'} ${CO[c]}`).join(', ');
+  return m===1?`คำนวณตามทศนิยม: ${txt}`:`เกลี่ยตามโควตา: ${txt} (${r.adj[0].d>0?'บริษัทที่ได้น้อยสุด':'บริษัทที่ได้มากสุด'})`;
+}
+let S={open:{},q:[140,140,140,105],st:0,sn:1,colors:DEF.slice(),week:DEFWEEK.map(r=>r.slice()),day:(new Date().getDay()+6)%7,edited:false,round:1};
 TR.forEach(t=>S.open[t]=true);
 try{const x=JSON.parse(localStorage.getItem('rfqs_v2'));if(x&&x.q&&x.open)S=Object.assign(S,x);}catch(e){}
 
@@ -359,16 +380,23 @@ function copy(t,m){
     try{document.execCommand('copy')}catch(e){}a.remove();}).then(()=>flash(m));
 }
 
-const rescale=()=>{S.q=hamilton(S.week[S.day],openList().length*CAP);S.edited=false;};
-function updateQnote(){$('qnote').innerHTML=S.edited?'แก้ไขเอง · <button class="underline" id="qreset">คืนค่าอัตโนมัติ</button>':'คำนวณอัตโนมัติ (Largest Remainder)';}
+const rescale=()=>{S.q=scale(S.week[S.day],openList().length*CAP,S.round||1).q;S.edited=false;};
+function updateQnote(){
+  $('qnote').innerHTML=S.edited?'แก้ไขเอง · <button class="underline" id="qreset">คืนค่าอัตโนมัติ</button>':'คำนวณอัตโนมัติ';
+  if(S.edited){$('rnote').textContent='โควตาถูกแก้ไขด้วยมือ';return;}
+  const m=S.round||1,r=scale(S.week[S.day],openList().length*CAP,m);
+  $('rnote').textContent=(r.raw[0]||r.raw[1]||r.raw[2]||r.raw[3]?'ค่าดิบ '+CO.map((c,i)=>`${c} ${r.raw[i].toFixed(2)}`).join(' · ')+' → ':'')+roundNote(r,m);
+}
 function syncQuota(){document.querySelectorAll('[data-q]').forEach(el=>el.value=S.q[el.dataset.q]);updateQnote();renderValid();}
 $('qnote').onclick=e=>{if(e.target.id==='qreset'){rescale();save();clearRes();syncQuota();}};
 function renderDays(){
   $('days').innerHTML=DAYS.map((d,i)=>`<button data-d="${i}" class="pill ${i===S.day?'on':''}">${d}</button>`).join('');
+  $('rmethod').innerHTML=`<span class="text-xs text-slate-400">วิธีปัดเศษ</span>`+[[1,'ตามทศนิยม (Largest Remainder)'],[2,'เกลี่ยตามโควตาน้อยสุด/มากสุด']].map(([v,t])=>`<button data-r="${v}" class="pill ${(S.round||1)===v?'on':''}" style="font-size:12px">${t}</button>`).join('');
   const w=S.week[S.day],B=w.reduce((a,b)=>a+b,0),n=openList().length;
   $('baseinfo').textContent=B===0?'⚠ ยังไม่ได้ตั้งค่าโควตาฐานของวันนี้ (ตั้งค่าที่ส่วนตั้งค่าโควตามาตรฐาน)':`โควตาฐาน${DAYS[S.day]}: ${CO.map((c,i)=>`${c} ${w[i]}`).join(' · ')} = ${B} แคร่${B!==525?' (ไม่ใช่ 525)':''} → ปรับตามจริงเป็น ${n*CAP} แคร่`;
 }
 $('days').onclick=e=>{const b=e.target.closest('[data-d]');if(!b)return;S.day=+b.dataset.d;rescale();save();clearRes();renderDays();syncQuota();};
+$('rmethod').onclick=e=>{const b=e.target.closest('[data-r]');if(!b)return;S.round=+b.dataset.r;rescale();save();clearRes();renderDays();syncQuota();};
 function updateWeekSums(){DAYS.forEach((_,d)=>{const t=S.week[d].reduce((a,b)=>a+b,0),el=$('ws'+d);
   if(el){el.textContent=t===525?'525 ✓':t+' ⚠';el.className='py-1.5 text-right whitespace-nowrap '+(t===525?'text-emerald-600':'text-red-600');}});}
 function renderWeek(){
