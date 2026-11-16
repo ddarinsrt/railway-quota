@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>จัดแบ่งโควตาการขนส่งทางรถไฟประจำวัน</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif}
+@media print{.no-print{display:none!important}body{background:#fff}}
+</style>
+</head>
+<body class="bg-slate-100 text-slate-900">
+<div class="max-w-5xl mx-auto p-3 sm:p-6 space-y-4">
+  <header>
+    <h1 class="text-xl sm:text-2xl font-bold">🚆 จัดแบ่งโควตาการขนส่งทางรถไฟประจำวัน</h1>
+    <p class="text-sm text-slate-500">Railway Freight Quota Scheduler · ความจุ 35 แคร่/ขบวน · บันทึกข้อมูลล่าสุดอัตโนมัติ</p>
+  </header>
+
+  <section class="no-print card bg-white rounded-xl border p-4">
+    <div class="flex flex-wrap justify-between gap-2 mb-3">
+      <h2 class="font-semibold">1. สถานะขบวนรถ</h2>
+      <div id="capinfo" class="text-sm"></div>
+    </div>
+    <div id="trains" class="grid grid-cols-3 sm:grid-cols-5 gap-2"></div>
+  </section>
+
+  <section class="no-print bg-white rounded-xl border p-4">
+    <h2 class="font-semibold mb-3">2. โควตาแคร่แต่ละบริษัท</h2>
+    <div id="quota" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+    <div id="valid" class="mt-3 text-sm rounded-lg px-3 py-2"></div>
+  </section>
+
+  <section class="no-print bg-white rounded-xl border p-4">
+    <h2 class="font-semibold mb-3">3. ลำดับเริ่มต้น</h2>
+    <div class="grid sm:grid-cols-2 gap-3 text-sm">
+      <label>บริษัทแรกของวันนี้<select id="st" class="w-full border rounded-lg px-3 py-2 bg-white"></select></label>
+      <label>บริษัทแรกของวันพรุ่งนี้<select id="sn" class="w-full border rounded-lg px-3 py-2 bg-white"></select></label>
+    </div>
+    <div class="flex flex-wrap gap-2 mt-4">
+      <button id="go" class="rounded-lg bg-blue-600 text-white px-4 py-2 font-medium disabled:opacity-40">จัดตารางการเดินรถ</button>
+      <button id="sample" class="rounded-lg border px-4 py-2 inline-flex items-center gap-1"></button>
+    </div>
+  </section>
+
+  <div id="result"></div>
+  <div id="toast" class="no-print fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-slate-900 text-white px-4 py-2 text-sm shadow-lg hidden"></div>
+</div>
+
+<script>
+const TR=[4431,4433,4435,4437,4439,4441,4443,4445,4447,4449,4451,4453,4455,4457,4459];
+const CO=['SSS','ESCO','ECTT','NICD'],CAP=35;
+const COL=['#2563eb','#16a34a','#ea580c','#9333ea'];
+const $=id=>document.getElementById(id);
+const nz=r=>r.filter(x=>x>0).length;
+const IC={
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  warn:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4M12 17h.01"/>',
+  copy:'<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  print:'<path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/>',
+  lock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  unlock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
+  dice:'<rect width="18" height="18" x="3" y="3" rx="3"/><path d="M8 8h.01M16 8h.01M8 16h.01M16 16h.01M12 12h.01"/>'
+};
+const ic=(n,c='w-4 h-4')=>`<svg class="${c} inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
+
+/* ---------- State + localStorage ---------- */
+let S={open:{},q:[140,140,140,105],st:0,sn:1};
+TR.forEach(t=>S.open[t]=true);
+try{const x=JSON.parse(localStorage.getItem('rfqs_v2'));if(x&&x.q&&x.open)S=x;}catch(e){}
+let RES=null;
+const save=()=>{try{localStorage.setItem('rfqs_v2',JSON.stringify(S))}catch(e){}};
+const openList=()=>TR.filter(t=>S.open[t]);
+
+/* ---------- Solver ---------- */
+// all mixed row vectors (2-3 companies, sum 35)
+const V=[],IDX=new Map();
+(function(){for(let a=0;a<=CAP;a++)for(let b=0;a+b<=CAP;b++)for(let c=0;a+b+c<=CAP;c++){
+  const d=CAP-a-b-c,v=[a,b,c,d],k=nz(v);if(k>=2&&k<=3)V.push(v);}
+  const sp=v=>{const x=v.filter(y=>y>0);return Math.max(...x)-Math.min(...x)};
+  V.sort((p,q)=>nz(p)-nz(q)||sp(p)-sp(q));V.forEach((v,i)=>IDX.set(v.join(),i));})();
+
+function groupings(r,m){
+  const out=[];let nodes=0;
+  if(m===0)return r.every(x=>x===0)?[[[],0]]:[];
+  (function rec(rem,left,prev,acc){
+    if(nodes>3e6||out.length>20000)return;
+    if(left===1){const i=IDX.get(rem.join());if(i!==undefined&&i>=prev)out.push(acc.concat([rem]));return;}
+    for(let i=prev;i<V.length;i++){nodes++;const v=V[i];
+      if(v[0]<=rem[0]&&v[1]<=rem[1]&&v[2]<=rem[2]&&v[3]<=rem[3])rec(rem.map((x,j)=>x-v[j]),left-1,i,acc.concat([v]));
+      if(nodes>3e6)return;}
+  })(r,m,0,[]);
+  const cost=g=>g.reduce((a,v)=>a+(nz(v)===3?1e3+Math.max(...v)-Math.min(...v.filter(x=>x>0)):0),0);
+  return out.map(g=>[g,cost(g)]).sort((a,b)=>a[1]-b[1]).slice(0,25);
+}
+
+function sequence(types,cnt,n,cfg,cyc,tom,present,cap,K,fixed){
+  const k=cyc.length,last=[-1,-1,-1,-1],order=[],sols=[];let thr=Infinity,nodes=0;
+  const chk=(R,t,prev)=>{let v=0;
+    if(prev&&R.some((x,c)=>x>0&&prev[c]>0&&x+prev[c]>CAP)){if(cfg.adj)return -1;v++;}
+    if(t<k&&!(R[cyc[t]]>0)){if(cfg.f4)return -1;v++;}
+    if(t===n-1&&tom>=0&&R[tom]>0){if(cfg.bd)return -1;v++;}
+    return v;};
+  const place=(R,t,mx,sq)=>{let m=mx,s=sq;R.forEach((x,c)=>{if(x>0){const g=t-last[c];if(g>m)m=g;s+=g*g;last[c]=t;}});return [m,s];};
+  (function dfs(t,prev,mx,sq,viol){
+    if(nodes++>cap)return;
+    if(t===n){let m=mx,s=sq;for(let c=0;c<4;c++)if(present[c]){const g=n-last[c];if(g>m)m=g;s+=g*g;}
+      const sc=viol*1e6+m*1e4+s;
+      if(sc<thr){sols.push({order:order.slice(),score:sc});sols.sort((a,b)=>a.score-b.score);if(sols.length>K)sols.pop();if(sols.length>=K)thr=sols[K-1].score;}
+      return;}
+    if(fixed[t]){const R=fixed[t],v=chk(R,t,prev);if(v<0)return;const sv=last.slice(),[m2,q2]=place(R,t,mx,sq);
+      if(m2*1e4+q2+(viol+v)*1e6<thr){order[t]=R;dfs(t+1,R,m2,q2,viol+v);}
+      for(let c=0;c<4;c++)last[c]=sv[c];return;}
+    const cs=[];
+    for(let i=0;i<types.length;i++){if(cnt[i]<=0)continue;const R=types[i],v=chk(R,t,prev);if(v<0)continue;
+      let st=0;R.forEach((x,c)=>{if(x>0)st+=t-last[c]});cs.push([i,v,st]);}
+    cs.sort((a,b)=>b[2]-a[2]);
+    for(const [i,v] of cs){const R=types[i],sv=last.slice(),[m2,q2]=place(R,t,mx,sq);
+      if(m2*1e4+q2+(viol+v)*1e6<thr){cnt[i]--;order[t]=R;dfs(t+1,R,m2,q2,viol+v);cnt[i]++;}
+      for(let c=0;c<4;c++)last[c]=sv[c];}
+  })(0,null,0,0,0);
+  return sols;
+}
+
+function pickVariants(all){
+  const mv=Math.min(...all.map(a=>Math.floor(a.score/1e6)));
+  const L=all.filter(a=>Math.floor(a.score/1e6)===mv).sort((a,b)=>a.tot-b.tot);
+  const by=new Map();L.forEach(a=>{if(!by.has(a.key))by.set(a.key,[]);by.get(a.key).push(a)});
+  const lists=[...by.values()],out=[],seen=new Set();
+  for(let d=0;out.length<10;d++){let add=false;
+    for(const l of lists){const a=l[d];if(!a)continue;add=true;
+      const sg=a.rows.map(r=>r.join()).join('|');if(seen.has(sg))continue;seen.add(sg);out.push(a);if(out.length>=10)break;}
+    if(!add)break;}
+  const mgs=out.map(a=>Math.floor((a.score%1e6)/1e4)),minMg=Math.min(...mgs);
+  out.forEach((a,i)=>{
+    const mixes=[...new Set(a.rows.filter(r=>nz(r)>1).map(r=>r.map((x,c)=>x?CO[c]+x:'').filter(Boolean).join('+')))];
+    a.desc=(i===0?'แนะนำ: ':'')+(mgs[i]===minMg?'กระจายรอบสม่ำเสมอที่สุด ':'')+`(Max Gap ${mgs[i]})`
+      +(mixes.length?' · จับคู่ผสม '+mixes.join(' , '):' · ขบวนเดี่ยวทั้งหมด')+(mv?' · มีเงื่อนไขที่ผ่อนผัน':'');});
+  return out;
+}
+
+function solve(n,q,st,sn,fixed){
+  fixed=fixed||[];
+  const qf=q.slice();fixed.forEach(R=>{if(R)R.forEach((x,c)=>qf[c]-=x)});
+  if(qf.some(x=>x<0))return null;
+  if(fixed.filter(Boolean).length===n)return [{rows:fixed.slice(),score:0,desc:'ล็อกครบทุกขบวนแล้ว'}];
+  const cyc=[];for(let i=0;i<4;i++){const c=(st+i)%4;if(q[c]>0)cyc.push(c);}
+  const present=q.map(x=>x>0),dl=Date.now()+4500;
+  const p0=qf.map(x=>Math.floor(x/CAP)),r0=qf.map(x=>x%CAP);
+  const breaks=[[[]]];
+  breaks.push(p0.map((p,c)=>p>0?[c]:null).filter(Boolean));
+  const b2=[];for(let a=0;a<4;a++)for(let b=a;b<4;b++){const pp=p0.slice();pp[a]--;pp[b]--;if(pp[a]>=0&&pp[b]>=0)b2.push([a,b]);}
+  breaks.push(b2);
+  const levels=[{adj:1,f4:1,bd:1},{adj:1,f4:1,bd:0},{adj:1,f4:0,bd:0},{adj:0,f4:0,bd:0}];
+  for(let li=0;li<levels.length;li++){
+    const cfg=levels[li],fin=li===levels.length-1;
+    for(let b=0;b<=2;b++){
+      if(!fin&&Date.now()>dl)break;
+      if(fin&&b>0)break;
+      const all=[];
+      for(const br of breaks[b]){
+        const p=p0.slice(),r=r0.slice();br.forEach(c=>{p[c]--;r[c]+=CAP;});
+        const m=r.reduce((a,x)=>a+x,0)/CAP;if(!Number.isInteger(m)||m>5)continue;
+        const gs=groupings(r,m),K=Math.max(2,Math.min(10,Math.ceil(12/Math.max(1,gs.length))));
+        for(const [g,gc] of gs){
+          if(!fin&&Date.now()>dl)break;
+          const types=[],cnt=[];
+          p.forEach((x,c)=>{if(x>0){const v=[0,0,0,0];v[c]=CAP;types.push(v);cnt.push(x);}});
+          g.forEach(v=>{const i=types.findIndex(t=>t.join()===v.join());if(i>=0)cnt[i]++;else{types.push(v);cnt.push(1);}});
+          const key=g.map(v=>v.join()).sort().join('|');
+          for(const sq of sequence(types,cnt,n,cfg,cyc,sn,present,fin?200000:30000,K,fixed))
+            all.push({rows:sq.order,score:sq.score,tot:sq.score+gc*100,key});
+        }
+      }
+      if(all.length)return pickVariants(all);
+    }
+  }
+  return null;
+}
+
+/* ---------- Checks ---------- */
+function analyze(rows,ol,q,st,sn){
+  const n=rows.length,cyc=[];for(let i=0;i<4;i++){const c=(st+i)%4;if(q[c]>0)cyc.push(c);}
+  const R0=q.reduce((a,x)=>a+x%CAP,0)/CAP;
+  const f4=cyc.every((c,i)=>i>=n||rows[i][c]>0);
+  const mixed=rows.filter(r=>nz(r)>1).length,three=rows.filter(r=>nz(r)>2).length;
+  const bad=[];for(let i=1;i<n;i++)if(rows[i].some((x,c)=>x>0&&rows[i-1][c]>0&&x+rows[i-1][c]>CAP))bad.push(ol[i-1]+'-'+ol[i]);
+  const bd=!(rows[n-1][sn]>0);
+  const okq=rows.every(r=>r.reduce((a,b)=>a+b,0)===CAP)&&CO.every((_,c)=>rows.reduce((a,r)=>a+r[c],0)===q[c]);
+  const gaps=CO.map((_,c)=>{const idx=[];rows.forEach((r,i)=>{if(r[c]>0)idx.push(i)});
+    let mg=0;for(let i=1;i<idx.length;i++)mg=Math.max(mg,idx[i]-idx[i-1]);return {c,idx,mg};});
+  return {gaps,checks:[
+    {ok:f4,t:'1. คิว 4 ขบวนแรก',d:f4?`เริ่มที่ ${CO[st]} และเรียงตามคิววงกลมครบ`:'บริษัทหลักของคิวไม่ตรงลำดับ'},
+    {ok:mixed<=2&&rows.every(r=>nz(r)<=3),t:'2. ขบวนผสมน้อยที่สุด',d:`ขบวนผสม ${mixed} ขบวน (3 บริษัท ${three}) · ขั้นต่ำตามโควตา ${R0}`},
+    {ok:!bad.length,t:'3. กฎห้ามติดกัน',d:bad.length?'พบบริษัทซ้ำติดกันเกิน 35 แคร่: '+bad.join(', '):'ไม่มีบริษัทซ้ำติดกัน (หรือรวมไม่เกิน 35 แคร่)'},
+    {ok:bd,t:'4. รอยต่อวันถัดไป',d:bd?`ขบวนสุดท้ายไม่มี ${CO[sn]}`:`ขบวนสุดท้ายมี ${CO[sn]} (หลีกเลี่ยงไม่ได้)`},
+    {ok:okq,t:'5. โควตาและความจุ',d:okq?'ทุกขบวนครบ 35 แคร่ และตรงโควตา':'ยอดไม่ตรงโควตา'}]};
+}
+
+/* ---------- UI ---------- */
+const sums=()=>S.q.reduce((a,b)=>a+b,0);
+function renderTrains(){
+  $('trains').innerHTML=TR.map(t=>`<button data-t="${t}" class="rounded-lg border px-2 py-2 text-sm font-medium ${S.open[t]?'bg-emerald-50 border-emerald-400 text-emerald-800':'bg-slate-100 border-slate-300 text-slate-400 line-through'}">${S.open[t]?'✓':'✕'} ${t}</button>`).join('');
+  const n=openList().length;$('capinfo').innerHTML=`เปิดเดิน <b>${n}</b> ขบวน · ความจุสูงสุด <b>${n*CAP}</b> แคร่`;
+  renderValid();
+}
+function renderValid(){
+  const n=openList().length,cap=n*CAP,s=sums(),ok=n>0&&s===cap;
+  const v=$('valid');v.className='mt-3 text-sm rounded-lg px-3 py-2 '+(ok?'bg-emerald-50 text-emerald-800':'bg-red-50 text-red-700');
+  v.innerHTML=n===0?'⚠ ยังไม่ได้เลือกขบวนที่เปิดเดิน':ok?`✓ รวม ${s} แคร่ ตรงกับความจุ ${cap} แคร่`:`⚠ รวมโควตา ${s} แคร่ ไม่ตรงกับความจุ ${cap} แคร่ (${s>cap?'เกิน':'ขาด'} ${Math.abs(s-cap)})`;
+  $('go').disabled=!ok;
+}
+function buildInputs(){
+  $('quota').innerHTML=CO.map((c,i)=>`<label class="block text-sm"><span class="inline-flex items-center gap-1 font-medium"><i class="inline-block w-3 h-3 rounded-sm" style="background:${COL[i]}"></i>${c}</span>
+    <input data-q="${i}" type="number" min="0" inputmode="numeric" value="${S.q[i]}" class="w-full border rounded-lg px-3 py-2"></label>`).join('');
+  $('st').innerHTML=$('sn').innerHTML=CO.map((c,i)=>`<option value="${i}">${c}</option>`).join('');
+  $('st').value=S.st;$('sn').value=S.sn;
+  $('sample').innerHTML=ic('dice')+' สุ่มข้อมูลทดสอบ';
+}
+function clearRes(){RES=null;$('result').innerHTML='';}
+
+$('trains').onclick=e=>{const b=e.target.closest('button');if(!b)return;const t=b.dataset.t;S.open[t]=!S.open[t];save();clearRes();renderTrains();};
+$('quota').oninput=e=>{const i=e.target.dataset.q;if(i===undefined)return;S.q[i]=Math.max(0,parseInt(e.target.value)||0);save();clearRes();renderValid();};
+$('st').onchange=e=>{S.st=+e.target.value;save();clearRes();};
+$('sn').onchange=e=>{S.sn=+e.target.value;save();clearRes();};
+$('sample').onclick=()=>{
+  const k=Math.floor(Math.random()*4),cl=new Set();while(cl.size<k)cl.add(TR[Math.floor(Math.random()*15)]);
+  S.open={};TR.forEach(t=>S.open[t]=!cl.has(t));
+  const tot=(15-k)*CAP,w=CO.map(()=>.5+Math.random()),ws=w.reduce((a,b)=>a+b,0);
+  S.q=w.map(x=>Math.floor(tot*x/ws));S.q[Math.floor(Math.random()*4)]+=tot-sums();
+  S.st=Math.floor(Math.random()*4);S.sn=Math.floor(Math.random()*4);
+  save();clearRes();buildInputs();renderTrains();
+};
+$('go').onclick=()=>{RES=null;recompute(false);};
+function flash(m){const e=$('toast');e.textContent=m;e.classList.remove('hidden');setTimeout(()=>e.classList.add('hidden'),2500);}
+function recompute(rand){
+  const prev=RES,go=$('go'),ol=prev?prev.ol:openList(),locks=prev?prev.locks:{};
+  const q=prev?prev.q:S.q.slice(),st=prev?prev.st:S.st,sn=prev?prev.sn:S.sn;
+  go.disabled=true;go.textContent='กำลังคำนวณ…';
+  setTimeout(()=>{
+    const vs=solve(ol.length,q,st,sn,ol.map(t=>locks[t]||null));
+    go.textContent='จัดตารางการเดินรถ';renderValid();
+    if(!vs){if(prev)flash('ไม่พบแผนที่เข้ากับขบวนที่ล็อกไว้');else $('result').innerHTML='<div class="rounded-xl bg-red-50 text-red-700 p-4">⚠ ไม่พบแผนที่เป็นไปได้ กรุณาปรับโควตาหรือขบวนที่เปิดเดิน</div>';return;}
+    RES={vs,cur:0,ol,q,st,sn,locks};
+    if(rand&&vs.length>1)RES.cur=1+Math.floor(Math.random()*(vs.length-1));
+    renderResult();
+  },30);
+}
+
+function renderResult(){
+  Object.assign(RES,{rows:RES.vs[RES.cur].rows},analyze(RES.vs[RES.cur].rows,RES.ol,RES.q,RES.st,RES.sn));
+  const R=RES,nl=Object.keys(RES.locks).length,btn='rounded-lg px-3 py-1.5 text-sm inline-flex items-center gap-1 ';
+  const plan=TR.map(t=>{const i=R.ol.indexOf(t);
+    if(i<0)return `<div class="flex items-center gap-3 text-sm opacity-60"><b class="w-12">${t}</b><span class="rounded bg-slate-200 px-2 py-0.5 text-xs">งดเดิน</span></div>`;
+    const r=R.rows[i],k=nz(r),lk=!!R.locks[t];
+    return `<div class="flex items-center gap-2 text-sm ${lk?'ring-2 ring-amber-400 bg-amber-50 rounded-md p-1':''}"><b class="w-12 shrink-0">${t}</b>
+      <span class="w-16 shrink-0 text-xs rounded px-1.5 py-0.5 text-center ${k>1?'bg-amber-100 text-amber-800':'bg-slate-100 text-slate-600'}">${k>1?'ผสม '+k:'เดี่ยว'}</span>
+      <div class="flex h-8 flex-1 overflow-hidden rounded-md bg-slate-200">${r.map((x,c)=>x>0?`<div class="flex items-center justify-center text-white text-xs font-medium whitespace-nowrap overflow-hidden" style="width:${x/CAP*100}%;background:${COL[c]}">${CO[c]} ${x}</div>`:'').join('')}</div>
+      <button data-l="${t}" title="${lk?'ปลดล็อก':'ล็อกขบวนนี้'}" class="no-print shrink-0 rounded-md border p-1.5 ${lk?'bg-amber-400 text-white border-amber-500':'bg-white text-slate-500'}">${ic(lk?'lock':'unlock')}</button></div>`;}).join('');
+  const gap=R.gaps.filter(g=>g.idx.length).map(g=>`<div class="rounded-lg border p-3 text-sm"><div class="font-semibold flex items-center gap-1"><i class="inline-block w-3 h-3 rounded-sm" style="background:${COL[g.c]}"></i>${CO[g.c]} · ${g.idx.length} ขบวน</div>
+    <div class="text-slate-600 mt-1">${g.idx.map(i=>R.ol[i]).join(', ')}</div><div class="mt-1">ทิ้งช่วงสูงสุด <b>${g.mg||'-'}</b> ขบวน</div></div>`).join('');
+  const chk=R.checks.concat(nl?[{ok:true,t:'6. ขบวนที่ล็อก',d:`ตรึงค่าเดิม ${nl} ขบวน (${Object.keys(R.locks).join(', ')}) และจัดขบวนที่เหลือให้สอดคล้อง`}]:[]).map(c=>`<div class="flex gap-3 rounded-lg px-3 py-2 text-sm ${c.ok?'bg-emerald-50':'bg-red-50'}"><span class="${c.ok?'text-emerald-600':'text-red-600'}">${ic(c.ok?'check':'warn','w-5 h-5')}</span><div><div class="font-medium">${c.t}</div><div class="text-slate-600">${c.d}</div></div></div>`).join('');
+  $('result').innerHTML=`<div class="space-y-4">
+   <section class="bg-white rounded-xl border p-4"><div class="flex flex-wrap justify-between gap-2 mb-3 no-print"><h2 class="font-semibold">แผนการเดินรถ</h2>
+     <div class="flex flex-wrap gap-2"><button id="bLine" class="${btn}bg-green-600 text-white">${ic('copy')} คัดลอกสรุปส่ง LINE</button>
+     <button id="bCsv" class="${btn}border">${ic('dl')} Export CSV/Excel</button><button id="bPrint" class="${btn}border">${ic('print')} พิมพ์</button></div></div>
+     <div class="mb-3"><div class="no-print flex flex-wrap gap-2 items-center">${R.vs.map((v,i)=>`<button data-v="${i}" class="rounded-lg border px-3 py-1.5 text-sm ${i===R.cur?'bg-blue-600 text-white border-blue-600':'bg-white'}">รูปแบบที่ ${i+1}${i===0?' (แนะนำ)':''}</button>`).join('')}<button id="bShuf" class="${btn}border">🔀 สุ่มเปลี่ยนรูปแบบเฉพาะขบวนที่ปลดล็อก</button>
+     <button id="bRe" class="${btn}border">คำนวณใหม่</button><button id="bUnl" class="${btn}border">${ic('unlock')} ปลดล็อกทั้งหมด (${nl})</button></div>
+     <div class="text-sm text-slate-600 mt-2">รูปแบบที่ ${R.cur+1}/${R.vs.length} — ${R.vs[R.cur].desc}</div></div>
+     <div class="space-y-1.5">${plan}</div></section>
+   <section class="bg-white rounded-xl border p-4"><h2 class="font-semibold mb-3">สรุปการกระจายรอบของแต่ละบริษัท</h2><div class="grid sm:grid-cols-2 gap-2">${gap}</div></section>
+   <section class="bg-white rounded-xl border p-4"><h2 class="font-semibold mb-3">แผงตรวจสอบเงื่อนไข</h2><div class="space-y-2">${chk}</div></section></div>`;
+  $('bLine').onclick=()=>copy(lineText(),'คัดลอกสรุปแล้ว');
+  document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{RES.cur=+b.dataset.v;renderResult();});
+  $('bShuf').onclick=()=>{if(RES.vs.length>1){let j;do{j=Math.floor(Math.random()*RES.vs.length)}while(j===RES.cur);RES.cur=j;renderResult();}else recompute(true);};
+  $('bRe').onclick=()=>recompute(false);
+  $('bUnl').onclick=()=>{RES.locks={};renderResult();};
+  document.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{
+    const t=+b.dataset.l,i=RES.ol.indexOf(t);
+    if(RES.locks[t])delete RES.locks[t];
+    else{RES.locks[t]=RES.rows[i].slice();const cur=RES.rows;
+      RES.vs=RES.vs.filter(v=>RES.ol.every((tt,j)=>!RES.locks[tt]||v.rows[j].join()===RES.locks[tt].join()));
+      RES.cur=Math.max(0,RES.vs.findIndex(v=>v.rows===cur));}
+    renderResult();});
+  $('bCsv').onclick=downloadCsv;$('bPrint').onclick=()=>window.print();
+}
+function lineText(){
+  const d=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+  let s=`🚆 แผนจัดสรรแคร่ ${d}\n`;
+  TR.forEach(t=>{const i=RES.ol.indexOf(t);s+=i<0?`${t}: งดเดิน\n`:`${t}: `+RES.rows[i].map((x,c)=>x?`${CO[c]} ${x}`:'').filter(Boolean).join(' + ')+'\n';});
+  return s+'\nรวม: '+CO.map((c,i)=>`${c} ${RES.q[i]}`).join(' | ');
+}
+function downloadCsv(){
+  const L=['ขบวน,สถานะ,ประเภท,'+CO.join(',')+',รวม'];
+  TR.forEach(t=>{const i=RES.ol.indexOf(t);if(i<0)L.push(`${t},งดเดิน,-,0,0,0,0,0`);else{const r=RES.rows[i];L.push(`${t},เปิดเดิน,${nz(r)>1?'ผสม':'เดี่ยว'},${r.join(',')},${CAP}`);}});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+L.join('\n')],{type:'text/csv;charset=utf-8'}));
+  a.download='railway-plan.csv';document.body.appendChild(a);a.click();a.remove();
+}
+function copy(t,m){
+  const done=()=>{const e=$('toast');e.textContent=m;e.classList.remove('hidden');setTimeout(()=>e.classList.add('hidden'),2000);};
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(done).catch(()=>{
+    const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();
+    try{document.execCommand('copy')}catch(e){}a.remove();done();});
+}
+buildInputs();renderTrains();
+</script>
+</body>
+</html>
