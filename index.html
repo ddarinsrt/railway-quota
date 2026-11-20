@@ -25,6 +25,7 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
 .row.over{outline:1px dashed #94a3b8}
 @media print{.no-print{display:none!important}body{background:#fff}.sec{border-color:#e2e8f0}}
 .lim{max-width:760px;margin-left:auto;margin-right:auto;width:100%}
+.datebox{position:relative;display:block;cursor:pointer}.datebox .dlbl{display:block;min-height:38px}.datebox input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 </style>
 </head>
 <body class="antialiased">
@@ -42,7 +43,7 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
   <div id="pBook" class="space-y-5">
     <section class="sec no-print lim">
       <div class="lbl">วันที่ทำการจอง</div>
-      <input type="date" id="bdate" class="inp">
+      <label class="datebox"><span class="inp dlbl"></span><input type="date" id="bdate"></label>
       <div id="bstatus" class="text-sm text-slate-600 mt-3"></div>
       <div id="btabs" class="flex flex-wrap gap-2 mt-3"></div>
     </section>
@@ -75,7 +76,7 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
   <div id="pAct" class="space-y-5 hidden">
     <section class="sec no-print lim">
       <div class="lbl">วันที่เดินรถจริง</div>
-      <input type="date" id="adate" class="inp">
+      <label class="datebox"><span class="inp dlbl"></span><input type="date" id="adate"></label>
       <div id="ainfo" class="text-sm text-slate-600 mt-3"></div>
     </section>
     <section class="sec no-print lim">
@@ -88,7 +89,7 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
   <div id="pForm" class="space-y-5 hidden">
     <section class="sec no-print lim">
       <div class="lbl">ใบงานประจำวัน (วันเดินรถ)</div>
-      <input type="date" id="fdate" class="inp">
+      <label class="datebox"><span class="inp dlbl"></span><input type="date" id="fdate"></label>
       <div id="fmode" class="flex flex-wrap gap-2 mt-4"></div>
       <div id="fdev" class="text-xs mt-3"></div>
       <div class="flex flex-wrap gap-2 mt-4">
@@ -135,6 +136,10 @@ const addDays=(iso,n)=>{const d=parseD(iso);d.setDate(d.getDate()+n);return toIS
 const wIdx=iso=>(parseD(iso).getDay()+6)%7;
 const short=iso=>{const d=parseD(iso);return `${d.getDate()} ${MON[d.getMonth()]} ${String(d.getFullYear()+543).slice(-2)}`};
 const shortBE=short,longBE=short;
+const dateLbl=iso=>iso?short(iso):'เลือกวันที่';
+function setDate(id,v){const el=document.getElementById(id);if(!el)return;el.value=v||'';const l=el.parentNode.querySelector('.dlbl');if(l)l.textContent=dateLbl(v);}
+document.addEventListener('click',e=>{const t=e.target;if(t&&t.matches&&t.matches('.datebox input')&&t.showPicker){try{t.showPicker();}catch(_){}}});
+document.addEventListener('change',e=>{const t=e.target;if(t&&t.matches&&t.matches('.datebox input')){const l=t.parentNode.querySelector('.dlbl');if(l)l.textContent=dateLbl(t.value);}},true);
 const INB=TR.map(t=>t+1);
 const fmt=iso=>`${short(iso)} (วัน${DAYS[wIdx(iso)]})`;
 const TODAY=toISO(new Date());
@@ -175,7 +180,7 @@ if(!S.bdate)S.bdate=TODAY;if(!S.adate)S.adate=TODAY;
 if(!S.periods||!S.periods.length)S.periods=[{id:'p1',name:'รอบมาตรฐาน',from:'',to:'',week:(S.week||DEFWEEK).map(r=>r.slice())}];
 if(!S.pSel||!S.periods.some(p=>p.id===S.pSel))S.pSel=S.periods[0].id;
 if(!S.cap)S.cap=35;if(!S.fdate)S.fdate=addDays(TODAY,1);if(S.gsUrl===undefined)S.gsUrl='';
-if(!DB.inb)DB.inb={};if(!DB.load)DB.load={};if(!S.inOpen)S.inOpen={};if(!S.nTrains)S.nTrains=15;if(!S.fmode)S.fmode='plan';
+if(!DB.inb)DB.inb={};if(!DB.load)DB.load={};if(S.quotaDirty===undefined)S.quotaDirty=false;if(!S.inOpen)S.inOpen={};if(!S.nTrains)S.nTrains=15;if(!S.fmode)S.fmode='plan';
 const curP=()=>S.periods.find(p=>p.id===S.pSel)||S.periods[0];
 function periodFor(d){
   const c=S.periods.filter(p=>(!p.from||p.from<=d)&&(!p.to||p.to>=d)).sort((a,b)=>(b.from||'').localeCompare(a.from||''));
@@ -383,13 +388,14 @@ function summaryHtml(R,title){
   return `<section class="sec"><div class="lbl">${title}</div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-xs text-slate-400"><tr><th class="text-left font-normal pb-1">บริษัท</th><th class="text-left font-normal pb-1">โควตา</th><th class="text-left font-normal pb-1">ขบวนที่ลง</th><th class="text-left font-normal pb-1">สัดส่วน</th><th class="text-left font-normal pb-1">เลขขบวน</th><th class="text-right font-normal pb-1">ห่างสูงสุด</th></tr></thead><tbody>${body}</tbody></table></div></section>`;
 }
 function pairPills(isOut,isIn,aOut,aIn){
-  const pill=(no,on,attr)=>`<button ${attr}="${no}" class="rounded-full border px-2 py-0.5 text-xs tabular-nums ${on?'border-slate-300 text-slate-800 bg-white':'border-slate-100 text-slate-300 bg-slate-50 line-through'}">${no}</button>`;
-  return TR.map(t=>`<span class="inline-flex gap-0.5 rounded-full bg-slate-50 p-0.5" title="${t} ⇄ ${t+1}">${pill(t,isOut(t),aOut)}${pill(t+1,isIn(t+1),aIn)}</span>`).join('');
+  const pill=(no,on,attr)=>`<button ${attr}="${no}" title="${attr==='data-t'||attr==='data-at'?no+' ⇄ '+(no+1):(no-1)+' ⇄ '+no}" class="rounded-full border px-2 py-0.5 text-xs tabular-nums ${on?'border-slate-400 text-slate-900 bg-white':'border-red-200 text-red-400 bg-red-50 line-through'}">${no}</button>`;
+  const row=(label,list)=>`<div class="mb-2"><div class="text-xs font-semibold text-slate-600 mb-1">${label}</div><div class="flex flex-wrap gap-1.5">${list}</div></div>`;
+  return row('ขาออก (15 ขบวน: 4431–4459)',TR.map(t=>pill(t,isOut(t),aOut)).join(''))+row('ขาเข้า (15 ขบวน: 4432–4460)',INB.map(t=>pill(t,isIn(t),aIn)).join(''));
 }
 
 /* ----- Booking tab: head / editor ----- */
 function renderBookHead(){
-  $('bdate').value=S.bdate;const t=targets(S.bdate),w=wIdx(S.bdate);
+  setDate('bdate',S.bdate);const t=targets(S.bdate),w=wIdx(S.bdate);
   $('bstatus').innerHTML=w===6?'<span class="text-red-600">วันอาทิตย์ปิดทำการจอง (จองล่วงหน้าไปแล้วในวันเสาร์)</span>'
     :w===5?`เปิดจองโควตาของ <b>วันอาทิตย์</b> (${short(t[0])}) และ <b>วันจันทร์</b> (${short(t[1])})`
     :`เปิดจองโควตาของวันถัดไป: <b>วัน${DAYS[wIdx(t[0])]}</b> (${short(t[0])})`;
@@ -530,7 +536,7 @@ function renderResult(){
   const R=RES,L=R.locks,nl=Object.keys(L).length,inO=R.inOpen||R.ol.map(t=>t+1);
   const list=TR.map(t=>{const i=R.ol.indexOf(t),ti=t+1,inOn=inO.includes(ti);
     let left,right;
-    if(i<0)left=`<div class="flex items-center gap-2 py-2 text-xs text-slate-300"><b class="w-10 tabular-nums">${t}</b>ไม่เปิดจอง</div>`;
+    if(i<0)left=`<div class="flex items-center gap-2 py-2 text-sm"><b class="w-10 tabular-nums">${t}</b><span class="font-bold text-red-600">งดเดิน</span></div>`;
     else{const r=R.rows[i],lk=!!L[t],ed=R.edit===i;
       left=`<div class="row flex items-start gap-1 py-2 ${lk?'bg-amber-50 border-l-2 border-l-amber-400 pl-1':''}" data-row="${i}" ${lk||ed?'':'draggable="true"'}>
         <span class="no-print w-2 text-slate-300 text-xs ${lk?'':'cursor-grab'} select-none pt-0.5">${lk?'':'⋮'}</span>
@@ -619,7 +625,7 @@ function actCell(no,lot,open,D){
 }
 const carryList=(carry)=>carry.length?`<div class="text-xs text-slate-500 mb-2">ค้าง ${carry.length} ล็อต (${carry.reduce((a,l)=>a+l.row.reduce((x,y)=>x+y,0),0)} แคร่)</div>`+carry.map(l=>`<div class="flex items-start gap-2 py-1.5 border-b border-slate-100 text-sm"><span class="w-24 shrink-0 text-slate-500">${short(l.date)} · ${l.train}</span>${stackBadges(l.row)}</div>`).join(''):'<div class="text-sm text-slate-400">ไม่มีสินค้าค้างส่ง</div>';
 function renderAct(){
-  const D=S.adate;$('adate').value=D;
+  const D=S.adate;setDate('adate',D);
   const QO=runQueue(D,'out'),QI=runQueue(D,'in'),pl=planOf(D),custom=!!(DB.actual[D]&&(DB.actual[D].open||DB.actual[D].inOpen));
   $('atrains').innerHTML=pairPills(t=>QO.ol.includes(t),t=>QI.ol.includes(t),'data-at','data-ati');
   $('ainfo').innerHTML=`เปิดจองไว้ ขาออก <b>${pl?pl.ol.length:0}</b> / ขาเข้า <b>${pl?(pl.inOpen||pl.ol.map(t=>t+1)).length:0}</b> · เดินจริง ขาออก <b>${QO.ol.length}</b> / ขาเข้า <b>${QI.ol.length}</b> ขบวน · สินค้าในคิว ขาออก <b>${QO.queue.length}</b> / ขาเข้า <b>${QI.queue.length}</b> ล็อต${custom?'':' <span class="text-slate-400">(ใช้ค่าเริ่มต้นตามแผนจอง)</span>'}`;
@@ -688,24 +694,26 @@ function renderWeek(){
    <div class="flex flex-wrap items-center gap-2"><select id="pSel" class="inp" style="width:auto">${S.periods.map(p=>`<option value="${p.id}" ${p.id===P.id?'selected':''}>${esc(p.name||'(ไม่มีชื่อ)')}${p.from||p.to?` · ${p.from||'…'} – ${p.to||'…'}`:''}</option>`).join('')}</select>
      <button class="btn" id="pAdd">+ เพิ่มรอบโควตา</button><button class="btn" id="pDel" ${S.periods.length<2?'disabled':''}>ลบรอบนี้</button></div>
    <div class="grid sm:grid-cols-3 gap-3 text-xs text-slate-500"><label>ชื่อรอบ<input class="inp mt-1" data-pn value="${esc(P.name)}"></label>
-     <label>วันที่เริ่มใช้<input type="date" class="inp mt-1" data-pf value="${P.from||''}"></label><label>วันที่สิ้นสุด<input type="date" class="inp mt-1" data-pt value="${P.to||''}"></label></div>
+     <div>วันที่เริ่มใช้<label class="datebox mt-1"><span class="inp dlbl">${dateLbl(P.from)}</span><input type="date" data-pf value="${P.from||''}"></label></div><div>วันที่สิ้นสุด<label class="datebox mt-1"><span class="inp dlbl">${dateLbl(P.to)}</span><input type="date" data-pt value="${P.to||''}"></label></div></div>
    <div class="text-xs text-slate-400">เว้นวันที่ว่าง = ไม่จำกัด · หากหลายรอบทับกันใช้รอบที่เริ่มล่าสุด · วันที่ไม่อยู่ในรอบใดใช้รอบแรก</div></div>
   <div class="overflow-x-auto"><table class="w-full text-sm mt-4"><thead class="text-xs text-slate-400"><tr><th class="text-left font-normal pb-2">วัน</th>${CO.map((c,i)=>`<th class="font-normal pb-2"><i class="inline-block w-2 h-2 rounded-full mr-1" style="background:var(--c${i})"></i>${c}</th>`).join('')}<th class="font-normal pb-2 text-right">รวม</th></tr></thead>
   <tbody>${DAYS.map((d,di)=>`<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 whitespace-nowrap">${d}</td>${CO.map((c,ci)=>`<td class="px-1 py-1"><input data-w="${di},${ci}" type="number" min="0" inputmode="numeric" value="${P.week[di][ci]}" class="inp text-center" style="padding:5px 6px"></td>`).join('')}<td class="py-1.5 text-right whitespace-nowrap" id="ws${di}"></td></tr>`).join('')}</tbody></table></div>
-  <div class="mt-4 flex flex-wrap items-center gap-3"><button class="btn" id="loadDef">โหลดค่าเริ่มต้นตัวอย่าง</button><span class="text-xs text-slate-400">ค่าทั้งหมดบันทึกอัตโนมัติ</span></div>
+  <div class="mt-4 flex flex-wrap items-center gap-3"><button class="btn" id="loadDef">โหลดค่าเริ่มต้นตัวอย่าง</button><button class="btn btn-dark" id="qSave">บันทึกโควตามาตรฐาน</button><span id="qSaveStat" class="text-xs"></span></div>
   <div class="mt-6"><div class="lbl">เชื่อมต่อ Google Sheets</div><input id="gsUrl" class="inp" placeholder="ลิงก์ Web App URL (https://script.google.com/macros/s/.../exec)" value="${esc(S.gsUrl)}"></div>`;
-  updateWeekSums();
+  updateWeekSums();updateQSave();
 }
-function weekChanged(){rescale();save();clearRes();updateWeekSums();if(S.tdate){renderBase();syncQuota();}}
+function updateQSave(){const el=$('qSaveStat');if(el)el.innerHTML=S.quotaDirty?'<span class="text-amber-600">⚠ ยังไม่ได้บันทึก — ต้องกด "บันทึกโควตามาตรฐาน" ก่อนส่งข้อมูลเข้า Google Sheets</span>':'<span class="text-emerald-600">✓ บันทึกโควตามาตรฐานแล้ว</span>';}
+function weekChanged(){S.quotaDirty=true;rescale();save();clearRes();updateWeekSums();updateQSave();if(S.tdate){renderBase();syncQuota();}}
 $('weekTbl').oninput=e=>{const t=e.target,d=t.dataset;
   if(d.w){const [a,c]=d.w.split(',').map(Number);curP().week[a][c]=Math.max(0,parseInt(t.value)||0);weekChanged();}
-  else if('pn' in d){curP().name=t.value;persist();const o=$('pSel').selectedOptions[0];if(o)o.textContent=t.value||'(ไม่มีชื่อ)';}
+  else if('pn' in d){curP().name=t.value;S.quotaDirty=true;persist();updateQSave();const o=$('pSel').selectedOptions[0];if(o)o.textContent=t.value||'(ไม่มีชื่อ)';}
   else if('pf' in d){curP().from=t.value;weekChanged();}
   else if('pt' in d){curP().to=t.value;weekChanged();}
   else if(t.id==='gsUrl'){S.gsUrl=t.value.trim();persist();}};
 $('weekTbl').onchange=e=>{if(e.target.id==='pSel'){S.pSel=e.target.value;persist();renderWeek();}};
 $('weekTbl').onclick=e=>{const id=e.target.closest('button')&&e.target.closest('button').id;
-  if(id==='loadDef'){curP().week=DEFWEEK.map(r=>r.slice());renderWeek();weekChanged();flash('โหลดค่าเริ่มต้นตัวอย่างแล้ว');}
+  if(id==='qSave'){S.quotaDirty=false;persist();updateQSave();flash('บันทึกโควตามาตรฐานแล้ว');}
+  else if(id==='loadDef'){curP().week=DEFWEEK.map(r=>r.slice());renderWeek();weekChanged();flash('โหลดค่าเริ่มต้นตัวอย่างแล้ว');}
   else if(id==='pAdd'){const n={id:'p'+Date.now(),name:'รอบใหม่',from:'',to:'',week:curP().week.map(r=>r.slice())};S.periods.push(n);S.pSel=n.id;renderWeek();weekChanged();}
   else if(id==='pDel'&&S.periods.length>1){S.periods=S.periods.filter(p=>p.id!==S.pSel);S.pSel=S.periods[0].id;renderWeek();weekChanged();}};
 
@@ -714,7 +722,7 @@ $('weekTbl').onclick=e=>{const id=e.target.closest('button')&&e.target.closest('
 const OUT_TIMES=["00.05-02.50","01.35-04.20","03.05-05.50","04.35-07.20","06.05-08.50","07.35-10.20","09.05-11.50","10.35-13.20","12.05-14.50","13.35-16.20","15.05-17.50","16.35-19.20","18.05-20.50","19.35-22.20","21.05-23.50"];
 const INB_TIMES=["10.50-13.25","12.20-14.55","13.50-16.25","15.20-17.55","16.50-19.25","18.20-20.55","19.50-22.25","21.20-23.55","22.50-01.25","00.20-02.55","03.20-05.55","04.50-07.25","06.20-08.55","07.50-10.25","09.20-11.55"];
 const bookingDateOf=op=>addDays(op,wIdx(op)===0?-2:-1);
-const FW=1100;
+const FW=1100,MAXROWS=6;
 let FORM_STATIC=false;
 const STDC={};
 function stdRows(D){
@@ -724,9 +732,13 @@ function stdRows(D){
   return STDC[key];
 }
 const pairsOf=r=>r?r.map((x,c)=>x>0?[c,x]:null).filter(Boolean):[];
-function parseCell(t){const r=[];String(t||'').replace(/(SSS|ESCO|ECTT|NICD)\s*[:=]?\s*(\d+)/gi,(m,c,n)=>{const i=CO.indexOf(c.toUpperCase());if(i>=0&&r.length<3)r.push([i,Math.min(+n,99)]);return m;});return r;}
+// บรรทุกจริง: รองรับหลายบรรทัด (สูงสุด 6) และทศนิยม 1 ตำแหน่ง เช่น "SSS 12.5 ESCO 20 ECTT 1.5 NICD 1"
+function parseCell(t){const r=[];String(t||'').replace(/(SSS|ESCO|ECTT|NICD)\s*[:=]?\s*(\d+(?:\.\d)?)/gi,(m,c,n)=>{const i=CO.indexOf(c.toUpperCase());if(i>=0&&r.length<MAXROWS)r.push([i,Math.round(parseFloat(n)*10)/10]);return m;});return r;}
 const pairsText=p=>p.map(([c,x])=>`${CO[c]} ${x}`).join(' ');
-const perCo=(arr,f)=>CO.map((_,c)=>arr.reduce((a,o)=>a+f(o).reduce((x,[cc,q])=>x+(cc===c?q:0),0),0));
+const nfmt=x=>Number.isInteger(x)?String(x):Number(x).toFixed(1);
+const f1=x=>Number(x).toFixed(1);
+const r1=x=>Math.round(x*10)/10;
+const perCo=(arr,f)=>CO.map((_,c)=>r1(arr.reduce((a,o)=>a+f(o).reduce((x,[cc,q])=>x+(cc===c?q:0),0),0)));
 function formData(D,mode){
   mode=mode||S.fmode;
   const pl=planOf(D),std=stdRows(D),QO=runQueue(D,'out'),QI=runQueue(D,'in'),load=DB.load[D]||{};
@@ -744,62 +756,86 @@ function formData(D,mode){
     inb.push({t:ti,time:INB_TIMES[i],std:stdRow,plan:{book:planIn,closed:inPlanClosed,noCargo:false,remark:''},real:rI,load:parseCell(load[ti]),raw:load[ti]||''});
   });
   const pick=o=>mode==='train'?o.real:o.plan;
-  const openOut=out.filter(o=>!pick(o).closed&&(mode==='train'?o.real.book.length||o.real.noCargo:o.plan.book.length)).length;
-  const openIn=inb.filter(o=>!pick(o).closed&&(mode==='train'?o.real.book.length||o.real.noCargo:o.plan.book.length)).length;
+  const isOpen=o=>!pick(o).closed&&(mode==='train'?(o.real.book.length||o.real.noCargo):o.plan.book.length);
+  const openOut=out.filter(isOpen).length,openIn=inb.filter(isOpen).length;
   const base=baseFor(D),B=base.reduce((a,b)=>a+b,0);
   const side=(arr,nOpen,isOut)=>({base:B?scale(base,15*CAP).q:[0,0,0,0],min65:B?scale(base,Math.round(B*.65)).q:[0,0,0,0],
-    quota:B?((isOut&&mode==='plan'&&pl)?pl.q:scale(base,nOpen*CAP).q):[0,0,0,0],book:perCo(arr,o=>pick(o).book),load:perCo(arr,o=>o.load),loadSum:arr.reduce((a,o)=>a+o.load.reduce((x,[,q])=>x+q,0),0)});
+    quota:B?((isOut&&mode==='plan'&&pl)?pl.q:scale(base,nOpen*CAP).q):[0,0,0,0],book:perCo(arr,o=>pick(o).book),load:perCo(arr,o=>o.load),loadSum:r1(arr.reduce((a,o)=>a+o.load.reduce((x,[,q])=>x+q,0),0))});
   const so=side(out,openOut,true),si=side(inb,openIn,false);
   const sum=(arr,f)=>arr.reduce((a,o)=>a+f(o).reduce((x,[,q])=>x+q,0),0);
-  const tot={std:sum(out,o=>o.std)+sum(inb,o=>o.std),book:sum(out,o=>pick(o).book)+sum(inb,o=>pick(o).book),load:so.loadSum+si.loadSum};
+  const tot={std:sum(out,o=>o.std)+sum(inb,o=>o.std),book:sum(out,o=>pick(o).book)+sum(inb,o=>pick(o).book),load:r1(so.loadSum+si.loadSum)};
   return {D,mode,pl,out,inb,pick,so,si,tot,dev,openOut,openIn,first:pl?pl.st:autoStart(D).st,QO,QI};
 }
-const lineHtml=pairs=>pairs.map(([c,x],k)=>`<div class="flex items-center justify-between gap-2 leading-5" style="${k?'border-top:1px dotted #94a3b8':''}"><span class="inline-flex items-center gap-1"><i class="inline-block w-1.5 h-1.5 rounded-full" style="background:${S.colors[c]}"></i>${CO[c]}</span><span>${x}</span></div>`).join('');
-const closedHtml='<div class="text-center font-bold text-red-600 text-base py-2">งดเดิน</div>';
 function sumTable(label,s,show,first){
-  const NAVY='color:#000080',RED='color:#FF0000';
-  const dif=(l,b)=>{const d=l-b;return `<span style="color:${d>0?'#008000':d<0?'#FF0000':'#000'}">${d>0?'+':''}${d}</span>`;};
-  const has=s.loadSum>0,sm=a=>a.reduce((x,y)=>x+y,0);
-  const row=CO.map((nm,c)=>`<tr><td></td><td style="color:#000;${c===first?'background:#FFFF00;':''}">${nm}</td><td>${s.base[c]}</td><td>${s.min65[c]}</td><td style="${NAVY}">${s.quota[c]}</td><td style="${NAVY}">${s.book[c]}</td><td style="${RED}">${has?s.load[c]:''}</td><td>${has?dif(s.load[c],s.book[c]):''}</td></tr>`).join('');
-  const tot=`<tr style="${RED};font-weight:700"><td></td><td>รวม</td><td>${sm(s.base)}</td><td>${sm(s.min65)}</td><td>${sm(s.quota)}</td><td>${sm(s.book)}</td><td>${has?sm(s.load):'บทต.'}</td><td>${has?`<span style="color:${sm(s.load)-sm(s.book)>0?'#008000':sm(s.load)-sm(s.book)<0?'#FF0000':'#000'}">${(sm(s.load)-sm(s.book))>0?'+':''}${sm(s.load)-sm(s.book)}</span>`:''}</td></tr>`;
-  return `<table class="w-full text-xs text-center" style="border-collapse:collapse;${show?'':'visibility:hidden'}"><thead><tr class="font-semibold"><td class="text-left" style="white-space:nowrap">${label}</td><td>บริษัท</td><td>โควตา 15 ขบวน</td><td>ขั้นต่ำ 65%</td><td style="${NAVY}">โควตา</td><td style="${NAVY}">จอง</td><td style="${RED}">ขึ้นจริง</td><td>ขึ้นแทน/<br>งดเดิน</td></tr></thead><tbody>${row}${tot}</tbody></table>`;
+  const NAVY='color:#000080',RED='color:#FF0000',C='color:#000;';
+  const col=d=>d>0?'#008000':d<0?'#FF0000':'#000';
+  const dif=(l,b)=>{const d=r1(l-b);return `<span style="color:${col(d)}">${d>0?'+':''}${nfmt(d)}</span>`;};
+  const has=s.loadSum>0,sm=a=>r1(a.reduce((x,y)=>x+y,0));
+  const td='padding:2px 4px;text-align:center;vertical-align:middle;font-size:12px;';
+  const row=CO.map((nm,c)=>`<tr><td style="${td}"></td><td style="${td}${C}${c===first?'background:#FFFF00;':''}">${nm}</td><td style="${td}${C}">${s.base[c]}</td><td style="${td}${C}">${s.min65[c]}</td><td style="${td}${NAVY}">${s.quota[c]}</td><td style="${td}${NAVY}">${s.book[c]}</td><td style="${td}${RED}">${has?nfmt(s.load[c]):''}</td><td style="${td}">${has?dif(s.load[c],s.book[c]):''}</td></tr>`).join('');
+  const dt=has?r1(sm(s.load)-sm(s.book)):0;
+  const tot=`<tr style="${RED};font-weight:700"><td style="${td}"></td><td style="${td}">รวม</td><td style="${td}">${sm(s.base)}</td><td style="${td}">${sm(s.min65)}</td><td style="${td}">${sm(s.quota)}</td><td style="${td}">${sm(s.book)}</td><td style="${td}">${has?nfmt(sm(s.load)):'บทต.'}</td><td style="${td}">${has?`<span style="color:${col(dt)}">${dt>0?'+':''}${nfmt(dt)}</span>`:''}</td></tr>`;
+  const hd=(t,c,w)=>`<td style="${td}font-weight:700;${c||C}${w?'width:'+w+'px;':''}">${t}</td>`;
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;${show?'':'visibility:hidden'}"><thead><tr>${hd(label,C,64)}${hd('บริษัท',C,44)}${hd('โควตา<br>15 ขบวน',C,56)}${hd('ขั้นต่ำ<br>65%',C,48)}${hd('โควตา',NAVY+';',50)}${hd('จอง',NAVY+';',46)}${hd('ขึ้นจริง',RED+';',52)}${hd('ขึ้นแทน/<br>งดเดิน',C)}</tr></thead><tbody>${row}${tot}</tbody></table>`;
+}
+const BASE='border:1px solid #000;color:#000;padding:1px 3px;text-align:center;vertical-align:middle;font-size:12px;background:#fff;';
+const th=(t,extra,attrs)=>`<th ${attrs||''} style="${BASE}font-weight:700;padding:3px;${extra||''}">${t}</th>`;
+function sideTable(rows,isOut,F,pairN,st){
+  const RED2='2px solid #dc2626',pick=F.pick,mode=F.mode;
+  const head=`<thead><tr>${th('ขบวน','width:44px','rowspan="2"')}${th('เวลา','width:50px','rowspan="2"')}${th('บริษัท/โควตา','','colspan="2"')}${th('การจองแคร่','','colspan="2"')}${th('บรรทุกจริง','','colspan="2"')}${th('หมายเหตุ','','rowspan="2"')}${isOut?'':'<th rowspan="2" style="width:66px;border:none;background:#fff"></th>'}</tr><tr>${['บริษัท','บทด.','บริษัท','บทด.','บริษัท','บทด.'].map((t,i)=>th(t,i%2?'width:38px':'width:54px')).join('')}</tr></thead>`;
+  const sumN=pairN.slice(9).reduce((a,b)=>a+b,0);
+  const body=rows.map((o,i)=>{
+    const v=pick(o),n=pairN[i],closed=v.closed,[dep,arr]=o.time.split('-'),box=!isOut&&i>=9;
+    let html='';
+    for(let k=0;k<n;k++){
+      const top=k===0?'border-top:1px solid #000;':'border-top:1px dotted #000;';           // เส้นคั่นบรรทัดย่อย = เส้นประ / คั่นขบวน = เส้นทึบ
+      let edge='';if(box){if(i===9&&k===0)edge+=`border-top:${RED2};`;if(i===14&&k===n-1)edge+=`border-bottom:${RED2};`;}
+      let tr='<tr style="height:22px">';
+      if(k===0){
+        const e0=box?`${i===9?`border-top:${RED2};`:''}${i===14?`border-bottom:${RED2};`:''}`:'';
+        tr+=`<td rowspan="${n}" style="${BASE}font-weight:700;border-top:1px solid #000;${e0}${box?`border-left:${RED2};`:''}">${o.t}</td>`;
+        tr+=`<td rowspan="${n}" style="${BASE}line-height:1.5;border-top:1px solid #000;${e0}">${dep}<br>↓<br>${arr}</td>`;
+      }
+      const q=o.std[k];
+      tr+=`<td style="${BASE}${top}${edge}">${q?CO[q[0]]:''}</td><td style="${BASE}${top}${edge}">${q?nfmt(q[1]):''}</td>`;
+      if(closed){
+        if(k===0)tr+=`<td colspan="4" rowspan="${n}" style="${BASE}border-top:1px solid #000;color:#dc2626;font-weight:800;font-size:22px">งดเดิน</td>`;
+      }else{
+        const b=v.book[k];
+        tr+=`<td style="${BASE}${top}${edge}font-weight:400">${b?CO[b[0]]:(k===0&&mode==='train'&&v.noCargo?'ไม่มีสินค้า':'')}</td><td style="${BASE}${top}${edge}font-weight:400">${b?nfmt(b[1]):''}</td>`;
+        if(st){const a=o.load[k];tr+=`<td style="${BASE}${top}${edge}">${a?CO[a[0]]:''}</td><td style="${BASE}${top}${edge}">${a?f1(a[1]):''}</td>`;}
+        else if(k===0)tr+=`<td colspan="2" rowspan="${n}" style="${BASE}border-top:1px solid #000;padding:2px"><input data-ld="${o.t}" class="inp" style="padding:3px 5px;font-size:11px" placeholder="SSS 12.5 ESCO 20 …" value="${esc(o.raw)}"></td>`;
+      }
+      if(k===0)tr+=`<td rowspan="${n}" style="${BASE}border-top:1px solid #000;font-weight:700;${box&&i===9?`border-top:${RED2};`:''}${box&&i===14?`border-bottom:${RED2};`:''}">${esc(mode==='train'?v.remark:'')}</td>`;
+      if(!isOut&&i===9&&k===0)tr+=`<td rowspan="${sumN}" style="border:${RED2};color:#dc2626;font-weight:800;text-align:center;vertical-align:middle;font-size:13px;background:#fff">${shortBE(addDays(F.D,1))}</td>`;
+      out_push(tr+'</tr>');
+    }
+    return html;
+    function out_push(s){html+=s;}
+  }).join('');
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed">${head}<tbody>${body}</tbody></table>`;
 }
 function renderForm(){
-  const D=S.fdate,mode=S.fmode;$('fdate').value=D;
-  const F=formData(D,mode),cap=Number(S.cap)||35,nT=Number(S.nTrains)||15,st=FORM_STATIC,pick=F.pick;
+  const D=S.fdate,mode=S.fmode;setDate('fdate',D);
+  const F=formData(D,mode),cap=Number(S.cap)||35,st=FORM_STATIC,pick=F.pick;
   $('fmode').innerHTML=[['plan','แผนเปิดจอง'],['train','แผนเดินรถไฟจริง (ชีทรถไฟ)']].map(([k,t])=>`<button data-fm="${k}" class="pill ${k===mode?'on':''}">${t}</button>`).join('');
   $('fdev').innerHTML=!F.pl?'ยังไม่มีแผนเปิดจองของวันนี้':F.dev?'<span class="text-amber-600">พบการเหลื่อมขบวน/เดินไม่ตรงแผนจอง → ระบบจะสร้างชีท "รถไฟ" ใน Google Sheets</span>':'<span class="text-emerald-600">เดินตรงตามแผนจอง → ไม่ต้องสร้างชีท "รถไฟ" (กรอกบรรทุกจริงในชีทวันที่ปกติ)</span>';
-  const td='border border-slate-300 px-1.5 py-1 align-top',BG_B='background:#E8F5E9;color:#000080;font-weight:700',BG_A='background:#FFEBEE;color:#000080;font-weight:400';
-  const ld=(o)=>st?`<div class="leading-5 text-xs">${esc(o.raw)}</div>`:`<input data-ld="${o.t}" class="inp" style="padding:3px 5px;font-size:11px;font-weight:400" placeholder="SSS 20 ESCO 15" value="${esc(o.raw)}">`;
-  const side=(rows,isOut)=>{
-    const head=`<thead><tr class="bg-slate-100 text-xs"><th class="${td}" style="width:46px">ขบวน</th><th class="${td}" style="width:52px">เวลา</th><th class="${td}" style="width:88px">บริษัท/โควตา</th><th class="${td}" style="width:88px;background:#E8F5E9">การจองแคร่</th><th class="${td}" style="width:98px;background:#FFEBEE">บรรทุกจริง</th><th class="${td}">หมายเหตุ</th>${isOut?'':`<th style="width:22px"></th>`}</tr></thead>`;
-    const body=rows.map((o,i)=>{
-      const v=pick(o),[dep,arr]=o.time.split('-'),box=!isOut&&i>=9,red='2px solid #dc2626';
-      const bx=()=>box?`${i===9?'border-top:'+red+';':''}${i===14?'border-bottom:'+red+';':''}`:'';
-      const b=v.closed?closedHtml:(mode==='train'&&v.noCargo)?'<div class="text-xs text-slate-400 py-2 text-center">ไม่มีสินค้า</div>':lineHtml(v.book);
-      const dateCell=!isOut&&i===9?`<td rowspan="6" style="border:${red};writing-mode:vertical-rl;text-align:center;color:#dc2626;font-weight:700;font-size:12px">${shortBE(addDays(D,1))}</td>`:'';
-      return `<tr><td class="${td} font-bold text-center" style="${bx()}${box?'border-left:'+red+';':''}">${o.t}</td>
-        <td class="${td} text-center text-xs leading-5" style="${bx()}">${dep}<br>↓<br>${arr}</td>
-        <td class="${td}" style="${bx()}">${lineHtml(o.std)}</td><td class="${td}" style="${BG_B};${bx()}">${b}</td>
-        <td class="${td}" style="${BG_A};${bx()}">${ld(o)}</td><td class="${td} text-xs" style="color:#b45309;font-weight:700;${bx()}">${esc(mode==='train'?v.remark:'')}</td>${dateCell}</tr>`;}).join('');
-    return `<table class="w-full border-collapse text-xs" style="table-layout:fixed">${head}<tbody>${body}</tbody></table>`;
-  };
+  const pairN=F.out.map((o,i)=>{const a=F.inb[i],ln=x=>pick(x).closed?0:pick(x).book.length;return Math.max(3,o.std.length,ln(o),ln(a),o.load.length,a.load.length);});
   const wd=DAYS[wIdx(D)],lf=F.tot.std?(F.tot.book/F.tot.std*100):0;
-  const card=(t,v,c)=>`<div class="rounded-lg border border-slate-200 px-3 py-2 text-center"><div class="text-xs text-slate-400">${t}</div><div class="text-xl font-bold ${c||''}">${v}</div></div>`;
+  const card=(t,v,c)=>`<div style="border:1px solid #000;padding:6px 10px;text-align:center"><div style="font-size:12px;color:#000">${t}</div><div style="font-size:22px;font-weight:800;color:${c||'#000'}">${v}</div></div>`;
   const capIn=st?`<b>${cap}</b>`:`<input id="capIn" type="number" min="1" value="${cap}" class="inp" style="width:56px;display:inline-block;padding:2px 6px">`;
-  const nIn=st?`<b>${nT}</b>`:`<input id="nIn" type="number" min="1" max="15" value="${nT}" class="inp" style="width:52px;display:inline-block;padding:2px 6px;background:#FEF9C3">`;
-  $('formArea').innerHTML=`<div id="formPaper" style="background:#fff;padding:14px;width:${FW}px;position:relative">
-    ${mode==='train'?'<div style="position:absolute;right:16px;top:10px;color:#dc2626;font-weight:800;font-size:22px">รถไฟ</div>':''}
-    <div class="text-sm text-slate-600" style="margin-right:${mode==='train'?'70px':'0'};text-align:right">ทำการจองเมื่อวันที่ ${shortBE(bookingDateOf(D))}</div>
-    <h2 class="text-center font-bold my-2" style="font-size:24px">บันทึกการจองแคร่ประจำวัน<span style="color:#dc2626">${wd}ที่ ${shortBE(D)}</span></h2>
-    <div class="grid grid-cols-4 gap-3 mb-4">${card('โควตารวม',F.tot.std)}${card('จองรวม',F.tot.book,'text-sky-700')}${card('บรรทุกจริง',F.tot.load||'-','text-orange-600')}${card('Load Factor %',lf.toFixed(1),lf<65?'text-red-600':'text-emerald-600')}</div>
-    <div class="grid grid-cols-2 gap-3">
-      <div><div class="font-semibold text-sm mb-1">ขาออก</div>${side(F.out,true)}
-        <div class="mt-3">${sumTable('โควตาขาออก',F.so,true,F.first)}</div>
-        <div class="text-xs mt-2">${capIn} บทต. ${nIn} ขบวน รวม <b>${nT*cap}</b> บทต.<br>เปิดจอง <b>${F.openOut}</b> ขบวน รวม <b>${F.openOut*cap}</b> บทต.</div></div>
-      <div><div class="font-semibold text-sm mb-1">ขาเข้า</div>${side(F.inb,false)}
-        <div class="mt-3">${sumTable('โควตาขาเข้า',F.si,F.si.loadSum>0,F.first)}</div>
-        <div class="text-xs mt-2" style="${F.si.loadSum>0?'':'visibility:hidden'}">เปิดจอง <b>${F.openIn}</b> ขบวนๆ ละ <b>${cap}</b> บทต. รวม <b>${F.openIn*cap}</b> บทต.</div></div>
+  $('formArea').innerHTML=`<div id="formPaper" style="background:#fff;color:#000;padding:14px;width:${FW}px;position:relative">
+    ${mode==='train'?'<div style="position:absolute;right:16px;top:10px;color:#dc2626;font-weight:800;font-size:24px">รถไฟ</div>':''}
+    <div style="font-size:14px;color:#000;text-align:right;margin-right:${mode==='train'?'74px':'0'}">ทำการจองเมื่อวันที่ ${shortBE(bookingDateOf(D))}</div>
+    <h2 style="text-align:center;font-weight:800;font-size:26px;margin:6px 0;color:#000">บันทึกการจองแคร่ประจำวัน<span style="color:#dc2626">${wd}ที่ ${shortBE(D)}</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">${card('โควตารวม',F.tot.std)}${card('จองรวม',F.tot.book,'#075985')}${card('บรรทุกจริง',F.tot.load?nfmt(F.tot.load):'-','#c2410c')}${card('Load Factor %',lf.toFixed(1),lf<65?'#dc2626':'#047857')}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#000">ขาออก</div>${sideTable(F.out,true,F,pairN,st)}
+        <div style="margin-top:10px">${sumTable('โควตาขาออก',F.so,true,F.first)}</div>
+        <div style="font-size:13px;margin-top:8px;color:#000">${capIn} บทต. <b>${F.openOut}</b> ขบวน รวม <b>${F.openOut*cap}</b> บทต.<br>เปิดจอง</div></div>
+      <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#000">ขาเข้า</div>${sideTable(F.inb,false,F,pairN,st)}
+        <div style="margin-top:10px">${sumTable('โควตาขาเข้า',F.si,F.si.loadSum>0,F.first)}</div>
+        <div style="font-size:13px;margin-top:8px;color:#000;${F.si.loadSum>0?'':'visibility:hidden'}">เปิดจอง <b>${F.openIn}</b> ขบวนๆ ละ <b>${cap}</b> บทต. รวม <b>${F.openIn*cap}</b> บทต.</div></div>
     </div></div>`;
   fitForm();
 }
@@ -814,8 +850,7 @@ $('fdate').onchange=e=>{if(!e.target.value)return;S.fdate=e.target.value;persist
 $('fmode').onclick=e=>{const b=e.target.closest('[data-fm]');if(b){S.fmode=b.dataset.fm;persist();renderForm();}};
 $('formArea').onchange=e=>{const t=e.target,d=t.dataset;
   if(d.ld){(DB.load[S.fdate]=DB.load[S.fdate]||{})[d.ld]=t.value;persist();renderForm();}
-  else if(t.id==='capIn'){S.cap=Math.max(1,parseInt(t.value)||35);persist();renderForm();}
-  else if(t.id==='nIn'){S.nTrains=Math.min(15,Math.max(1,parseInt(t.value)||15));persist();renderForm();}};
+  else if(t.id==='capIn'){S.cap=Math.max(1,parseInt(t.value)||35);persist();renderForm();}};
 async function exportPng(){
   if(!window.html2canvas){flash('โหลด html2canvas ไม่สำเร็จ (ต้องเชื่อมต่ออินเทอร์เน็ต)');return;}
   FORM_STATIC=true;renderForm();$('formArea').style.transform='none';await new Promise(r=>setTimeout(r,80));
@@ -830,12 +865,13 @@ function buildPayload(F){
   const per=periodFor(D),load={};[F.out,F.inb].forEach(a=>a.forEach(o=>{if(o.load.length)load[o.t]=o.load;}));
   const planDir=(arr,isOut)=>arr.map(o=>({train:o.t,time:o.time,std:o.std,book:o.plan.book,bookClosed:o.plan.closed,actOpen:isOut?F.QO.ol.includes(o.t):F.QI.ol.includes(o.t)}));
   return {action:'save',date:D,year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate(),weekday:DAYS[wIdx(D)],bookingDate:bookingDateOf(D),
-    cap:Number(S.cap)||35,nTrains:Number(S.nTrains)||15,first:F.first,colors:S.colors,periodId:per.id,weekIdx:wIdx(D),
+    cap:Number(S.cap)||35,first:F.first,colors:S.colors,periodId:per.id,weekIdx:wIdx(D),
     periods:S.periods.filter(p=>(!p.from||p.from<=me)&&(!p.to||p.to>=ms)).map(p=>({id:p.id,name:p.name,from:p.from,to:p.to,week:p.week})),
     out:planDir(F.out,true),inb:planDir(F.inb,false),load,
     summary:{base:F.so.base,min65:F.so.min65,openOut:F.so.quota,openIn:F.si.quota}};
 }
 async function sendSheets(){
+  if(S.quotaDirty){flash('กรุณากด "บันทึกโควตามาตรฐาน" ในส่วนตั้งค่าก่อนส่งข้อมูลเข้า Google Sheets');return;}
   const url=S.gsUrl;if(!url){flash('กรอก Web App URL ในส่วนตั้งค่าก่อน');return;}
   const F=formData(S.fdate,'plan'),body=JSON.stringify(buildPayload(F)),st=$('gsstat');st.textContent='กำลังส่งข้อมูล…';
   try{
@@ -861,7 +897,7 @@ document.getElementById('pForm').onclick=e=>{const b=e.target.closest('[data-f]'
   if(f==='png')exportPng();else if(f==='gs')sendSheets();else if(f==='xls')exportXls();else if(f==='print')window.print();};
 
 /* ----- Boot ----- */
-$('bdate').value=S.bdate;$('adate').value=S.adate;$('fdate').value=S.fdate;
+setDate('bdate',S.bdate);setDate('adate',S.adate);setDate('fdate',S.fdate);
 {const t=targets(S.bdate);if(!t.includes(S.tdate))S.tdate=t[0]||null;}
 if(S.tdate)loadEditor(S.tdate);
 applyColors();renderWeek();renderBook();setTab(S.tab||'book');
