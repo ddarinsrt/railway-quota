@@ -50,7 +50,8 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
     <div id="bEditor" class="space-y-5">
       <section class="sec no-print lim">
         <div class="flex justify-between items-baseline"><div class="lbl">ขบวนที่เปิดจอง (คู่ขาออก ⇄ ขาเข้า)</div><div id="capinfo" class="text-sm text-slate-500"></div></div>
-        <div id="trains" class="flex flex-wrap gap-1.5"></div>
+        <div id="trains"></div>
+        <div class="flex flex-wrap gap-2 mt-3"><button class="btn" data-all="both" data-ctx="book">เปิดเดินทั้งหมด</button><button class="btn" data-all="out" data-ctx="book">เปิดทั้งหมดขาออก</button><button class="btn" data-all="in" data-ctx="book">เปิดทั้งหมดขาเข้า</button></div>
         <div class="text-xs text-slate-400 mt-3">กดงดขบวนขาออก = งดขบวนขาเข้าที่คู่กันอัตโนมัติ · กดที่ขบวนขาเข้าโดยตรงเพื่อแก้ข้อยกเว้นเฉพาะขาเข้า</div>
       </section>
       <section class="sec no-print lim">
@@ -81,7 +82,8 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
     </section>
     <section class="sec no-print lim">
       <div class="flex justify-between items-baseline"><div class="lbl">ขบวนที่เปิดเดินจริง (คู่ขาออก ⇄ ขาเข้า)</div><button id="areset" class="text-xs text-slate-400 underline">คืนค่าเริ่มต้น</button></div>
-      <div id="atrains" class="flex flex-wrap gap-1.5"></div>
+      <div id="atrains"></div>
+      <div class="flex flex-wrap gap-2 mt-3"><button class="btn" data-all="both" data-ctx="act">เปิดเดินทั้งหมด</button><button class="btn" data-all="out" data-ctx="act">เปิดทั้งหมดขาออก</button><button class="btn" data-all="in" data-ctx="act">เปิดทั้งหมดขาเข้า</button></div>
     </section>
     <div id="aresult"></div>
   </div>
@@ -766,54 +768,60 @@ function formData(D,mode){
   const tot={std:sum(out,o=>o.std)+sum(inb,o=>o.std),book:sum(out,o=>pick(o).book)+sum(inb,o=>pick(o).book),load:r1(so.loadSum+si.loadSum)};
   return {D,mode,pl,out,inb,pick,so,si,tot,dev,openOut,openIn,first:pl?pl.st:autoStart(D).st,QO,QI};
 }
+const GREYBG='#F2F2F2',BOOKBG='#E8F5E9',BOOKH='#C8E6C9',ACTBG='#FFEBEE',ACTH='#FFCDD2',NAVYC='#000080',RED_='#FF0000';
 function sumTable(label,s,show,first){
-  const NAVY='color:#000080',RED='color:#FF0000',C='color:#000;';
+  const NAVY='color:#000080;',RED='color:#FF0000;',C='color:#000;';
   const col=d=>d>0?'#008000':d<0?'#FF0000':'#000';
   const dif=(l,b)=>{const d=r1(l-b);return `<span style="color:${col(d)}">${d>0?'+':''}${nfmt(d)}</span>`;};
   const has=s.loadSum>0,sm=a=>r1(a.reduce((x,y)=>x+y,0));
   const td='padding:2px 4px;text-align:center;vertical-align:middle;font-size:12px;';
   const row=CO.map((nm,c)=>`<tr><td style="${td}"></td><td style="${td}${C}${c===first?'background:#FFFF00;':''}">${nm}</td><td style="${td}${C}">${s.base[c]}</td><td style="${td}${C}">${s.min65[c]}</td><td style="${td}${NAVY}">${s.quota[c]}</td><td style="${td}${NAVY}">${s.book[c]}</td><td style="${td}${RED}">${has?nfmt(s.load[c]):''}</td><td style="${td}">${has?dif(s.load[c],s.book[c]):''}</td></tr>`).join('');
-  const dt=has?r1(sm(s.load)-sm(s.book)):0;
-  const tot=`<tr style="${RED};font-weight:700"><td style="${td}"></td><td style="${td}">รวม</td><td style="${td}">${sm(s.base)}</td><td style="${td}">${sm(s.min65)}</td><td style="${td}">${sm(s.quota)}</td><td style="${td}">${sm(s.book)}</td><td style="${td}">${has?nfmt(sm(s.load)):'บทต.'}</td><td style="${td}">${has?`<span style="color:${col(dt)}">${dt>0?'+':''}${nfmt(dt)}</span>`:''}</td></tr>`;
+  const tot=`<tr style="${RED}font-weight:700"><td style="${td}"></td><td style="${td}">รวม</td><td style="${td}">${sm(s.base)}</td><td style="${td}">${sm(s.min65)}</td><td style="${td}">${sm(s.quota)}</td><td style="${td}">${sm(s.book)}</td><td style="${td}">${has?nfmt(sm(s.load)):'บทต.'}</td><td style="${td}color:#000;font-weight:700">บทต.</td></tr>`;
   const hd=(t,c,w)=>`<td style="${td}font-weight:700;${c||C}${w?'width:'+w+'px;':''}">${t}</td>`;
-  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;${show?'':'visibility:hidden'}"><thead><tr>${hd(label,C,64)}${hd('บริษัท',C,44)}${hd('โควตา<br>15 ขบวน',C,56)}${hd('ขั้นต่ำ<br>65%',C,48)}${hd('โควตา',NAVY+';',50)}${hd('จอง',NAVY+';',46)}${hd('ขึ้นจริง',RED+';',52)}${hd('ขึ้นแทน/<br>งดเดิน',C)}</tr></thead><tbody>${row}${tot}</tbody></table>`;
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;${show?'':'visibility:hidden'}"><thead><tr>${hd(label,C,66)}${hd('บริษัท',C,46)}${hd('โควตา<br>15 ขบวน',C,58)}${hd('ขั้นต่ำ<br>65%',C,50)}${hd('โควตา',NAVY,50)}${hd('จอง',NAVY,46)}${hd('ขึ้นจริง',RED,52)}${hd('ขึ้นแทน/งดเดิน',C)}</tr></thead><tbody>${row}${tot}</tbody></table>`;
 }
 const BASE='border:1px solid #000;color:#000;padding:1px 3px;text-align:center;vertical-align:middle;font-size:12px;background:#fff;';
-const th=(t,extra,attrs)=>`<th ${attrs||''} style="${BASE}font-weight:700;padding:3px;${extra||''}">${t}</th>`;
+const th=(t,extra,attrs)=>`<th ${attrs||''} style="${BASE}font-weight:700;padding:3px;background:${GREYBG};${extra||''}">${t}</th>`;
 function sideTable(rows,isOut,F,pairN,st){
   const RED2='2px solid #dc2626',pick=F.pick,mode=F.mode;
-  const head=`<thead><tr>${th('ขบวน','width:44px','rowspan="2"')}${th('เวลา','width:50px','rowspan="2"')}${th('บริษัท/โควตา','','colspan="2"')}${th('การจองแคร่','','colspan="2"')}${th('บรรทุกจริง','','colspan="2"')}${th('หมายเหตุ','','rowspan="2"')}${isOut?'':'<th rowspan="2" style="width:66px;border:none;background:#fff"></th>'}</tr><tr>${['บริษัท','บทด.','บริษัท','บทด.','บริษัท','บทด.'].map((t,i)=>th(t,i%2?'width:38px':'width:54px')).join('')}</tr></thead>`;
+  const head=`<thead><tr>${th('ขบวน','width:44px','rowspan="2"')}${th('เวลา','width:50px','rowspan="2"')}${th('บริษัท/โควตา','','colspan="2"')}${th('การจองแคร่',`background:${BOOKH};`,'colspan="2"')}${th('บรรทุกจริง',`background:${ACTH};`,'colspan="2"')}${th('หมายเหตุ','','rowspan="2"')}${isOut?'':'<th rowspan="2" style="width:66px;border:none;background:#fff"></th>'}</tr><tr>${['บริษัท','บทด.','บริษัท','บทด.','บริษัท','บทด.'].map((t,i)=>th(t,`${i%2?'width:38px':'width:54px'};${i>=4?`background:${ACTH};`:i>=2?`background:${BOOKH};`:''}`)).join('')}</tr></thead>`;
   const sumN=pairN.slice(9).reduce((a,b)=>a+b,0);
   const body=rows.map((o,i)=>{
     const v=pick(o),n=pairN[i],closed=v.closed,[dep,arr]=o.time.split('-'),box=!isOut&&i>=9;
     let html='';
     for(let k=0;k<n;k++){
-      const top=k===0?'border-top:1px solid #000;':'border-top:1px dotted #000;';           // เส้นคั่นบรรทัดย่อย = เส้นประ / คั่นขบวน = เส้นทึบ
+      const top=k===0?'border-top:1px solid #000;':'border-top:1px dotted #000;';             // บรรทัดย่อย = เส้นประ / คั่นขบวน = เส้นทึบ
       let edge='';if(box){if(i===9&&k===0)edge+=`border-top:${RED2};`;if(i===14&&k===n-1)edge+=`border-bottom:${RED2};`;}
       let tr='<tr style="height:22px">';
       if(k===0){
         const e0=box?`${i===9?`border-top:${RED2};`:''}${i===14?`border-bottom:${RED2};`:''}`:'';
-        tr+=`<td rowspan="${n}" style="${BASE}font-weight:700;border-top:1px solid #000;${e0}${box?`border-left:${RED2};`:''}">${o.t}</td>`;
+        tr+=`<td rowspan="${n}" style="${BASE}font-weight:700;background:${GREYBG};border-top:1px solid #000;${e0}${box?`border-left:${RED2};`:''}">${o.t}</td>`;
         tr+=`<td rowspan="${n}" style="${BASE}line-height:1.5;border-top:1px solid #000;${e0}">${dep}<br>↓<br>${arr}</td>`;
       }
       const q=o.std[k];
       tr+=`<td style="${BASE}${top}${edge}">${q?CO[q[0]]:''}</td><td style="${BASE}${top}${edge}">${q?nfmt(q[1]):''}</td>`;
       if(closed){
-        if(k===0)tr+=`<td colspan="4" rowspan="${n}" style="${BASE}border-top:1px solid #000;color:#dc2626;font-weight:800;font-size:22px">งดเดิน</td>`;
+        if(k===0)tr+=`<td colspan="4" rowspan="${n}" style="${BASE}border-top:1px solid #000;background:#FFC7CE;color:#dc2626;font-weight:800;font-size:22px">งดเดิน</td>`;
       }else{
-        const b=v.book[k];
-        tr+=`<td style="${BASE}${top}${edge}font-weight:400">${b?CO[b[0]]:(k===0&&mode==='train'&&v.noCargo?'ไม่มีสินค้า':'')}</td><td style="${BASE}${top}${edge}font-weight:400">${b?nfmt(b[1]):''}</td>`;
-        if(st){const a=o.load[k];tr+=`<td style="${BASE}${top}${edge}">${a?CO[a[0]]:''}</td><td style="${BASE}${top}${edge}">${a?f1(a[1]):''}</td>`;}
-        else if(k===0)tr+=`<td colspan="2" rowspan="${n}" style="${BASE}border-top:1px solid #000;padding:2px"><input data-ld="${o.t}" class="inp" style="padding:3px 5px;font-size:11px" placeholder="SSS 12.5 ESCO 20 …" value="${esc(o.raw)}"></td>`;
+        const b=v.book[k],bs=`${BASE}${top}${edge}background:${BOOKBG};color:${NAVYC};font-weight:700;`;
+        tr+=`<td style="${bs}">${b?CO[b[0]]:(k===0&&mode==='train'&&v.noCargo?'ไม่มีสินค้า':'')}</td><td style="${bs}">${b?nfmt(b[1]):''}</td>`;
+        const as=`${BASE}${top}${edge}background:${ACTBG};color:${NAVYC};font-weight:400;`;
+        if(st){const a=o.load[k];tr+=`<td style="${as}">${a?CO[a[0]]:''}</td><td style="${as}">${a?nfmt(a[1]):''}</td>`;}
+        else if(k===0)tr+=`<td colspan="2" rowspan="${n}" style="${BASE}border-top:1px solid #000;background:${ACTBG};padding:2px"><input data-ld="${o.t}" class="inp" style="padding:3px 5px;font-size:11px;text-align:center" placeholder="SSS 12.5 ESCO 20 …" value="${esc(o.raw)}"></td>`;
       }
       if(k===0)tr+=`<td rowspan="${n}" style="${BASE}border-top:1px solid #000;font-weight:700;${box&&i===9?`border-top:${RED2};`:''}${box&&i===14?`border-bottom:${RED2};`:''}">${esc(mode==='train'?v.remark:'')}</td>`;
       if(!isOut&&i===9&&k===0)tr+=`<td rowspan="${sumN}" style="border:${RED2};color:#dc2626;font-weight:800;text-align:center;vertical-align:middle;font-size:13px;background:#fff">${shortBE(addDays(F.D,1))}</td>`;
-      out_push(tr+'</tr>');
+      html+=tr+'</tr>';
     }
     return html;
-    function out_push(s){html+=s;}
   }).join('');
-  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed">${head}<tbody>${body}</tbody></table>`;
+  // แถวรวมโควตา / Load Factor : ตัวอักษรแดง ปกติ ผสานช่องกึ่งกลาง
+  const qT=r1(rows.reduce((a,o)=>a+o.std.reduce((x,[,q])=>x+q,0),0)),bT=r1(rows.reduce((a,o)=>a+(pick(o).closed?0:pick(o).book.reduce((x,[,q])=>x+q,0)),0));
+  const aT=r1(rows.reduce((a,o)=>a+o.load.reduce((x,[,q])=>x+q,0),0)),lfB=qT?(bT/qT*100).toFixed(1):'0.0',lfA=qT?(aT/qT*100).toFixed(1):'0.0';
+  const rs=`${BASE}color:#FF0000;font-weight:400;`;
+  const foot=`<tr style="height:22px"><td colspan="2" style="${rs}">รวมโควตา</td><td colspan="2" style="${rs}">${nfmt(qT)}</td><td colspan="2" style="${rs}">${nfmt(bT)}</td><td colspan="2" style="${rs}">${nfmt(aT)}</td><td style="${rs}"></td></tr>
+    <tr style="height:22px"><td colspan="2" style="${rs}">Load Factor</td><td colspan="2" style="${rs}">${qT?'100.0':'0.0'}</td><td colspan="2" style="${rs}">${lfB}</td><td colspan="2" style="${rs}">${lfA}</td><td style="${rs}"></td></tr>`;
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed">${head}<tbody>${body}${foot}</tbody></table>`;
 }
 function renderForm(){
   const D=S.fdate,mode=S.fmode;setDate('fdate',D);
@@ -823,19 +831,21 @@ function renderForm(){
   const pairN=F.out.map((o,i)=>{const a=F.inb[i],ln=x=>pick(x).closed?0:pick(x).book.length;return Math.max(3,o.std.length,ln(o),ln(a),o.load.length,a.load.length);});
   const wd=DAYS[wIdx(D)],lf=F.tot.std?(F.tot.book/F.tot.std*100):0;
   const card=(t,v,c)=>`<div style="border:1px solid #000;padding:6px 10px;text-align:center"><div style="font-size:12px;color:#000">${t}</div><div style="font-size:22px;font-weight:800;color:${c||'#000'}">${v}</div></div>`;
-  const capIn=st?`<b>${cap}</b>`:`<input id="capIn" type="number" min="1" value="${cap}" class="inp" style="width:56px;display:inline-block;padding:2px 6px">`;
-  $('formArea').innerHTML=`<div id="formPaper" style="background:#fff;color:#000;padding:14px;width:${FW}px;position:relative">
+  const capIn=st?`<b>${cap}</b>`:`<input id="capIn" type="number" min="1" value="${cap}" class="inp" style="width:56px;display:inline-block;padding:2px 6px;text-align:center">`;
+  const cards=st?'':`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">${card('โควตารวม',F.tot.std)}${card('จองรวม',F.tot.book,'#075985')}${card('บรรทุกจริง',F.tot.load?nfmt(F.tot.load):'-','#c2410c')}${card('Load Factor %',lf.toFixed(1),lf<65?'#dc2626':'#047857')}</div>`;
+  $('formArea').innerHTML=`<div id="formPaper" style="background:#fff;color:#000;padding:14px;width:${FW}px;position:relative;text-align:center">
     ${mode==='train'?'<div style="position:absolute;right:16px;top:10px;color:#dc2626;font-weight:800;font-size:24px">รถไฟ</div>':''}
     <div style="font-size:14px;color:#000;text-align:right;margin-right:${mode==='train'?'74px':'0'}">ทำการจองเมื่อวันที่ ${shortBE(bookingDateOf(D))}</div>
     <h2 style="text-align:center;font-weight:800;font-size:26px;margin:6px 0;color:#000">บันทึกการจองแคร่ประจำวัน<span style="color:#dc2626">${wd}ที่ ${shortBE(D)}</span></h2>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">${card('โควตารวม',F.tot.std)}${card('จองรวม',F.tot.book,'#075985')}${card('บรรทุกจริง',F.tot.load?nfmt(F.tot.load):'-','#c2410c')}${card('Load Factor %',lf.toFixed(1),lf<65?'#dc2626':'#047857')}</div>
+    ${cards}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#000">ขาออก</div>${sideTable(F.out,true,F,pairN,st)}
         <div style="margin-top:10px">${sumTable('โควตาขาออก',F.so,true,F.first)}</div>
-        <div style="font-size:13px;margin-top:8px;color:#000">${capIn} บทต. <b>${F.openOut}</b> ขบวน รวม <b>${F.openOut*cap}</b> บทต.<br>เปิดจอง</div></div>
+        <div style="font-size:13px;margin-top:8px;color:#000;text-align:left">${capIn} บทต. <b>${F.openOut}</b> ขบวน รวม <b>${nfmt(F.openOut*cap)}</b> บทต.<br>
+          <span style="display:inline-block;border-bottom:4px double #000;margin-top:4px">รวม <b>${F.openOut}</b> ขบวน จำนวน <b>${nfmt(F.openOut*cap)}</b> บทต.</span></div></div>
       <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#000">ขาเข้า</div>${sideTable(F.inb,false,F,pairN,st)}
         <div style="margin-top:10px">${sumTable('โควตาขาเข้า',F.si,F.si.loadSum>0,F.first)}</div>
-        <div style="font-size:13px;margin-top:8px;color:#000;${F.si.loadSum>0?'':'visibility:hidden'}">เปิดจอง <b>${F.openIn}</b> ขบวนๆ ละ <b>${cap}</b> บทต. รวม <b>${F.openIn*cap}</b> บทต.</div></div>
+        <div style="font-size:13px;margin-top:8px;color:#000;text-align:left;${F.si.loadSum>0?'':'visibility:hidden'}">เปิดเดิน <b>${F.openIn}</b> ขบวนๆ ละ <b>${cap}</b> บทต. รวม <b>${nfmt(F.openIn*cap)}</b> บทต.</div></div>
     </div></div>`;
   fitForm();
 }
@@ -895,6 +905,22 @@ function exportXls(){
 }
 document.getElementById('pForm').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;const f=b.dataset.f;
   if(f==='png')exportPng();else if(f==='gs')sendSheets();else if(f==='xls')exportXls();else if(f==='print')window.print();};
+
+/* ----- ปุ่ม "เปิดเดินทั้งหมด" (ขาออก 15 + ขาเข้า 15) ----- */
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-all]');if(!b)return;const w=b.dataset.all;
+  if(b.dataset.ctx==='book'){
+    if(!S.tdate)return;
+    if(w!=='in')TR.forEach(t=>{S.open[t]=true;});
+    if(w!=='out')INB.forEach(t=>{S.inOpen[t]=true;});
+    rescale();save();clearRes();renderTrains();syncQuota();flash('เปิดเดินทั้งหมดแล้ว');
+  }else{
+    const D=S.adate,o=new Set(runQueue(D,'out').ol),i=new Set(runQueue(D,'in').ol);
+    if(w!=='in')TR.forEach(t=>o.add(t));
+    if(w!=='out')INB.forEach(t=>i.add(t));
+    DB.actual[D]={open:TR.filter(x=>o.has(x)),inOpen:INB.filter(x=>i.has(x))};persist();renderAct();flash('เปิดเดินทั้งหมดแล้ว');
+  }
+});
 
 /* ----- Boot ----- */
 setDate('bdate',S.bdate);setDate('adate',S.adate);setDate('fdate',S.fdate);
