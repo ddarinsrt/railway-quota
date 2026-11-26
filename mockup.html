@@ -3,208 +3,220 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Railway Freight Quota - โหมดตัวอย่างสำหรับฝึกงาน</title>
-  <!-- ใช้ jsDelivr CDN ที่เสถียรและไม่ค่อยถูกบล็อก -->
-  <link href="https://jsdelivr.net" rel="stylesheet">
-  <link href="https://googleapis.com" rel="stylesheet">
+  <title>ระบบจัดแบ่งโควตาการขนส่งทางรถไฟ (โหมดฝึกงาน)</title>
   <style>
-    /* CSS พื้นฐานฝังในตัว เพื่อให้สวยงามแน่นอนแม้เน็ตช้า */
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Sarabun', sans-serif;
+      font-family: 'Sarabun', 'Tahoma', -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: #F1F5F9;
       color: #1E293B;
-      margin: 0;
-      padding: 0;
+      line-height: 1.5;
     }
-    h1, h2, h3, .font-heading { font-family: 'Prompt', sans-serif; }
-    
     .top-bar {
       background-color: #0F172A;
       color: #FFFFFF;
-      padding: 14px 24px;
+      padding: 14px 20px;
       border-bottom: 1px solid #1E293B;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
-    .container-main {
+    .top-inner {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 20px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .badge-demo {
+      background: rgba(251, 191, 36, 0.2);
+      color: #FCD34D;
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px 16px 40px;
     }
     .card {
       background: #FFFFFF;
       border: 1px solid #E2E8F0;
       border-radius: 14px;
-      padding: 20px;
-      margin-bottom: 20px;
+      padding: 18px;
+      margin-bottom: 18px;
       box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
     }
-    .grid-2-col {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 20px;
+    .card-header {
+      border-bottom: 1px solid #F1F5F9;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
     }
-    .grid-equal {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-    .grid-4 {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-    }
-    @media (max-width: 768px) {
-      .grid-2-col, .grid-equal, .grid-3 { grid-template-columns: 1fr; }
+    .card-title { font-size: 15px; font-weight: 700; color: #0F172A; }
+    .grid-top { display: grid; grid-template-columns: 1.45fr 1fr; gap: 18px; margin-bottom: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 820px) {
+      .grid-top, .grid-3, .grid-2 { grid-template-columns: 1fr; }
       .grid-4 { grid-template-columns: repeat(2, 1fr); }
     }
+    .field-box {
+      background: #F8FAFC;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #E2E8F0;
+    }
+    .field-label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
     .input-box {
       width: 100%;
-      padding: 8px 10px;
+      padding: 7px 10px;
       border: 1px solid #CBD5E1;
       border-radius: 8px;
       font-size: 14px;
-      font-family: 'Sarabun', sans-serif;
+      font-weight: 700;
+      background: #FFFFFF;
+      color: #0F172A;
+    }
+    .input-box:focus { outline: none; border-color: #2563EB; }
+    .co-card {
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 10px;
       background: #FFFFFF;
     }
-    .input-box:focus {
-      outline: none;
-      border-color: #2563EB;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-    }
     .btn {
-      padding: 7px 14px;
+      padding: 6px 12px;
       border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 700;
       cursor: pointer;
-      border: 1px solid transparent;
-      transition: all 0.15s;
-      font-family: 'Sarabun', sans-serif;
+      border: 1px solid #CBD5E1;
+      background: #F8FAFC;
+      color: #334155;
+      transition: 0.15s;
     }
-    .btn-primary { background: #2563EB; color: #FFFFFF; }
+    .btn:hover { background: #E2E8F0; }
+    .btn-primary { background: #2563EB; color: #FFF; border-color: #2563EB; }
     .btn-primary:hover { background: #1D4ED8; }
-    .btn-success { background: #059669; color: #FFFFFF; }
+    .btn-success { background: #059669; color: #FFF; border-color: #059669; }
     .btn-success:hover { background: #047857; }
-    .btn-outline { background: #F8FAFC; color: #334155; border-color: #CBD5E1; }
-    .btn-outline:hover { background: #E2E8F0; }
     .btn-green-soft { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
     .btn-red-soft { background: #FEF2F2; color: #B91C1C; border-color: #FECACA; }
-    
     .train-pill {
       padding: 6px 10px;
-      border-radius: 8px;
+      border-radius: 7px;
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
       border: 1px solid #CBD5E1;
       margin: 3px;
-      transition: all 0.15s;
     }
-    .train-active-out { background: #2563EB; color: #FFFFFF; border-color: #2563EB; }
-    .train-active-in { background: #4F46E5; color: #FFFFFF; border-color: #4F46E5; }
-    .train-inactive { background: #F8FAFC; color: #94A3B8; text-decoration: line-through; }
-
-    .schedule-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      border-bottom: 1px solid #F1F5F9;
-    }
-    .schedule-row:last-child { border-bottom: none; }
-    .schedule-locked { background-color: #FFFBEB !important; }
-    .schedule-off { background-color: #F8FAFC; }
+    .train-out-on { background: #2563EB; color: #FFF; border-color: #2563EB; }
+    .train-in-on { background: #4F46E5; color: #FFF; border-color: #4F46E5; }
+    .train-off { background: #F8FAFC; color: #94A3B8; text-decoration: line-through; }
+    .sched-box { border: 1px solid #CBD5E1; border-radius: 12px; overflow: hidden; background: #FFF; }
+    .sched-head { padding: 10px 14px; color: #FFF; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; }
+    .sched-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid #F1F5F9; gap: 8px; }
+    .sched-row:last-child { border-bottom: none; }
+    .sched-locked { background: #FFFBEB; }
+    .sched-cancelled { background: #F8FAFC; }
+    .mini-btn { padding: 4px 7px; border-radius: 6px; border: 1px solid #E2E8F0; background: #FFF; cursor: pointer; font-size: 11px; }
+    .mini-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
-  <!-- Top Header -->
   <div class="top-bar">
-    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div class="top-inner">
       <div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 22px;">🚆</span>
-          <h1 style="margin: 0; font-size: 18px; font-weight: 700;">ระบบจัดแบ่งโควตาการขนส่งทางรถไฟ</h1>
-          <span style="background: rgba(251, 191, 36, 0.2); color: #FCD34D; border: 1px solid rgba(251, 191, 36, 0.4); padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;">
-            โหมดตัวอย่าง (Mockup สำหรับฝึกงาน)
-          </span>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span style="font-size:20px;">🚆</span>
+          <span style="font-size:18px; font-weight:700;">ระบบจัดแบ่งโควตาการขนส่งทางรถไฟ</span>
+          <span class="badge-demo">โหมดตัวอย่าง (Mockup สำหรับฝึกงาน)</span>
         </div>
-        <p style="margin: 2px 0 0 34px; font-size: 12px; color: #94A3B8;">แผนเปิดจองโควตาประจำวัน • ความจุมาตรฐาน 35 บทต./ขบวน</p>
+        <div style="font-size:12px; color:#94A3B8; margin-top:2px;">แผนเปิดจองโควตาประจำวัน • ความจุมาตรฐาน 35 บทต./ขบวน</div>
       </div>
-      <button onclick="resetDemo()" class="btn" style="background: #1E293B; color: #E2E8F0; border-color: #334155;">
-        ↻ รีเซ็ตค่าตัวอย่าง
-      </button>
+      <button onclick="resetDemo()" class="btn" style="background:#1E293B; color:#E2E8F0; border-color:#334155;">↻ รีเซ็ตตัวอย่าง</button>
     </div>
   </div>
 
-  <div class="container-main">
+  <div class="container">
 
-    <!-- Step 1: Config & LINE Preview -->
-    <div class="grid-2-col">
-      <!-- Left Box -->
-      <div class="card" style="margin-bottom: 0;">
-        <div style="border-bottom: 1px solid #F1F5F9; padding-bottom: 10px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="margin: 0; font-size: 15px; font-weight: 700; color: #0F172A;">1. กำหนดรอบวัน จำนวนขบวน และโควตาเปิดจอง</h2>
-          <span style="font-size: 12px; color: #64748B;">ทดลองแก้ตัวเลขได้อิสระ</span>
+    <!-- Step 1 -->
+    <div class="grid-top">
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <span class="card-title">1. กำหนดรอบวัน จำนวนขบวน และโควตาเปิดจอง</span>
+          <span style="font-size:12px; color:#64748B;">ทดลองแก้ตัวเลขได้อิสระ</span>
         </div>
 
-        <div class="grid-3" style="margin-bottom: 16px;">
-          <div style="background: #F8FAFC; padding: 10px; border-radius: 10px; border: 1px solid #E2E8F0;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px;">📅 วันที่ทำการจอง</label>
-            <input type="date" id="bookingDate" value="2026-11-26" onchange="updateDateDisplay()" class="input-box">
-            <div id="thaiDateLabel" style="font-size: 12px; font-weight: 700; color: #2563EB; margin-top: 6px;">เปิดจองของ: ศุกร์ที่ 27 พ.ย. 69</div>
+        <div class="grid-3">
+          <div class="field-box">
+            <label class="field-label">📅 วันที่ทำการจอง</label>
+            <input type="date" id="bookingDate" value="2026-11-26" onchange="updateDateDisplay()" class="input-box" style="font-weight:500;">
+            <div id="thaiDateLabel" style="font-size:12px; font-weight:700; color:#2563EB; margin-top:5px;">เปิดจองของ: ศุกร์ที่ 27 พ.ย. 69</div>
           </div>
 
-          <div style="background: #F8FAFC; padding: 10px; border-radius: 10px; border: 1px solid #E2E8F0;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px;">🔢 ขบวนเปิดจอง (เที่ยวเดียว)</label>
-            <input type="number" id="openTrainCount" value="10" min="1" max="15" oninput="handleTrainCountChange()" class="input-box" style="font-weight: 700;">
-            <div id="roundTripLabel" style="font-size: 12px; color: #64748B; margin-top: 6px;">รวม 20 ขบวนไป-กลับ (350 บทต.)</div>
+          <div class="field-box">
+            <label class="field-label">🔢 ขบวนเปิดจอง (เที่ยวเดียว)</label>
+            <input type="number" id="openTrainCount" value="10" min="0" max="15" oninput="handleTrainCountChange()" class="input-box">
+            <div id="roundTripLabel" style="font-size:12px; color:#64748B; margin-top:5px;">รวม 20 ขบวนไป-กลับ (350 บทต.)</div>
           </div>
 
-          <div style="background: #F8FAFC; padding: 10px; border-radius: 10px; border: 1px solid #E2E8F0;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px;">🔄 ลำดับขบวนแรก</label>
-            <select id="firstCompany" onchange="generatePlans()" class="input-box" style="font-weight: 700;">
+          <div class="field-box">
+            <label class="field-label">🔄 ลำดับขบวนแรก</label>
+            <select id="firstCompany" onchange="generatePlans()" class="input-box" style="cursor:pointer;">
               <option value="SSS">SSS (เริ่มคิว 1)</option>
               <option value="ESCO">ESCO (เริ่มคิว 2)</option>
               <option value="ECTT">ECTT (เริ่มคิว 3)</option>
               <option value="NICD">NICD (เริ่มคิว 4)</option>
             </select>
-            <div id="queueSequenceHint" style="font-size: 11px; color: #64748B; margin-top: 6px;">คิว: SSS → ESCO → ECTT → NICD</div>
+            <div id="queueHint" style="font-size:11px; color:#64748B; margin-top:5px;">คิว: SSS → ESCO → ECTT → NICD</div>
           </div>
         </div>
 
         <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-size: 13px; font-weight: 700; color: #334155;">โควตาแต่ละบริษัท (หน่วย: บทต.)</span>
-            <span id="quotaValidation" style="font-size: 12px; font-weight: 700; color: #059669; background: #ECFDF5; padding: 2px 10px; border-radius: 999px; border: 1px solid #A7F3D0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+            <span style="font-size:13px; font-weight:700;">โควตาแต่ละบริษัท (หน่วย: บทต.)</span>
+            <span id="quotaStatus" style="font-size:12px; font-weight:700; padding:2px 10px; border-radius:999px; background:#ECFDF5; color:#059669; border:1px solid #A7F3D0;">
               ✓ รวม 350 / 350 บทต. (ครบพอดี)
             </span>
           </div>
 
           <div class="grid-4">
-            <div id="card-SSS" style="border: 1px solid #E2E8F0; border-top: 4px solid #2563EB; border-radius: 10px; padding: 10px; background: #FFFFFF;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-weight: 700; font-size: 14px;">SSS</span>
-                <input type="color" id="color-SSS" value="#2563EB" onchange="updateColors()" style="width: 20px; height: 20px; border: none; cursor: pointer; background: none;">
+            <div id="card-SSS" class="co-card" style="border-top:4px solid #2563EB;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-weight:700; font-size:14px;">SSS</span>
+                <input type="color" id="color-SSS" value="#2563EB" onchange="updateColors()" style="width:20px; height:20px; border:none; background:none; cursor:pointer;">
               </div>
-              <input type="number" id="quota-SSS" value="125" min="0" oninput="handleManualQuota()" class="input-box" style="font-weight: 700; font-size: 15px;">
+              <input type="number" id="quota-SSS" value="125" min="0" oninput="handleManualQuota()" class="input-box">
             </div>
 
-            <div id="card-ESCO" style="border: 1px solid #E2E8F0; border-top: 4px solid #059669; border-radius: 10px; padding: 10px; background: #FFFFFF;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-weight: 700; font-size: 14px;">ESCO</span>
-                <input type="color" id="color-ESCO" value="#059669" onchange="updateColors()" style="width: 20px; height: 20px; border: none; cursor: pointer; background: none;">
+            <div id="card-ESCO" class="co-card" style="border-top:4px solid #059669;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-weight:700; font-size:14px;">ESCO</span>
+                <input type="color" id="color-ESCO" value="#059669" onchange="updateColors()" style="width:20px; height:20px; border:none; background:none; cursor:pointer;">
               </div>
-              <input type="number" id="quota-ESCO" value="85" min="0" oninput="handleManualQuota()" class="input-box" style="font-weight: 700; font-size: 15px;">
+              <input type="number" id="quota-ESCO" value="85" min="0" oninput="handleManualQuota()" class="input-box">
             </div>
 
-            <div id="card-ECTT" style="border: 1px solid #E2E8F0; border-top: 4px solid #D97706; border-radius: 10px; padding: 10px; background: #FFFFFF;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-weight: 700; font-size: 14px;">ECTT</span>
-                <input type="color" id="color-ECTT" value="#D97706" onchange="updateColors()" style="width: 20px; height: 20px; border: none; cursor: pointer; background: none;">
+            <div id="card-ECTT" class="co-card" style="border-top:4px solid #D97706;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-weight:700; font-size:14px;">ECTT</span>
+                <input type="color" id="color-ECTT" value="#D97706" onchange="updateColors()" style="width:20px; height:20px; border:none; background:none; cursor:pointer;">
+              </div>
+              <input type="number" id="quota-ECTT" value="80" min="0" oninput="handleManualQuota()" class="input-box">
+            </div>
+
+            <div id="card-NICD" class="co-card" style="border-top:4px solid #7C3AED;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-weight:700; font-size:14px;">NICD</span>
