@@ -1,222 +1,579 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบจัดแบ่งโควตาการขนส่งทางรถไฟ (โหมดฝึกงาน)</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Sarabun', 'Tahoma', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #F1F5F9;
-      color: #1E293B;
-      line-height: 1.5;
-    }
-    .top-bar {
-      background-color: #0F172A;
-      color: #FFFFFF;
-      padding: 14px 20px;
-      border-bottom: 1px solid #1E293B;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-    }
-    .top-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .badge-demo {
-      background: rgba(251, 191, 36, 0.2);
-      color: #FCD34D;
-      border: 1px solid rgba(251, 191, 36, 0.45);
-      padding: 2px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 18px 16px 40px;
-    }
-    .card {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 18px;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-    }
-    .card-header {
-      border-bottom: 1px solid #F1F5F9;
-      padding-bottom: 10px;
-      margin-bottom: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .card-title { font-size: 15px; font-weight: 700; color: #0F172A; }
-    .grid-top { display: grid; grid-template-columns: 1.45fr 1fr; gap: 18px; margin-bottom: 18px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    @media (max-width: 820px) {
-      .grid-top, .grid-3, .grid-2 { grid-template-columns: 1fr; }
-      .grid-4 { grid-template-columns: repeat(2, 1fr); }
-    }
-    .field-box {
-      background: #F8FAFC;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid #E2E8F0;
-    }
-    .field-label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
-    .input-box {
-      width: 100%;
-      padding: 7px 10px;
-      border: 1px solid #CBD5E1;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 700;
-      background: #FFFFFF;
-      color: #0F172A;
-    }
-    .input-box:focus { outline: none; border-color: #2563EB; }
-    .co-card {
-      border: 1px solid #E2E8F0;
-      border-radius: 10px;
-      padding: 10px;
-      background: #FFFFFF;
-    }
-    .btn {
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      border: 1px solid #CBD5E1;
-      background: #F8FAFC;
-      color: #334155;
-      transition: 0.15s;
-    }
-    .btn:hover { background: #E2E8F0; }
-    .btn-primary { background: #2563EB; color: #FFF; border-color: #2563EB; }
-    .btn-primary:hover { background: #1D4ED8; }
-    .btn-success { background: #059669; color: #FFF; border-color: #059669; }
-    .btn-success:hover { background: #047857; }
-    .btn-green-soft { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
-    .btn-red-soft { background: #FEF2F2; color: #B91C1C; border-color: #FECACA; }
-    .train-pill {
-      padding: 6px 10px;
-      border-radius: 7px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      border: 1px solid #CBD5E1;
-      margin: 3px;
-    }
-    .train-out-on { background: #2563EB; color: #FFF; border-color: #2563EB; }
-    .train-in-on { background: #4F46E5; color: #FFF; border-color: #4F46E5; }
-    .train-off { background: #F8FAFC; color: #94A3B8; text-decoration: line-through; }
-    .sched-box { border: 1px solid #CBD5E1; border-radius: 12px; overflow: hidden; background: #FFF; }
-    .sched-head { padding: 10px 14px; color: #FFF; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; }
-    .sched-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid #F1F5F9; gap: 8px; }
-    .sched-row:last-child { border-bottom: none; }
-    .sched-locked { background: #FFFBEB; }
-    .sched-cancelled { background: #F8FAFC; }
-    .mini-btn { padding: 4px 7px; border-radius: 6px; border: 1px solid #E2E8F0; background: #FFF; cursor: pointer; font-size: 11px; }
-    .mini-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[Mockup ฝึกงาน] แผนเปิดจองโควตาแคร่รถไฟ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--c0:#2563EB;--c1:#059669;--c2:#D97706;--c3:#7C3AED}
+body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8FAFC;color:#1e293b}
+.sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px}
+.lbl{font-size:12px;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+.btn{border:1px solid #e2e8f0;border-radius:9px;padding:6px 12px;font-size:13px;display:inline-flex;gap:6px;align-items:center;background:#fff;color:#334155}
+.btn:hover{background:#f8fafc}.btn:disabled{opacity:.4}
+.btn-dark{background:#0f172a;color:#fff;border-color:#0f172a}.btn-dark:hover{background:#1e293b}
+.pill{border:1px solid #e2e8f0;border-radius:9999px;padding:4px 14px;font-size:13px;background:#fff;color:#475569}
+.pill.on{background:#0f172a;color:#fff;border-color:#0f172a}
+.inp{width:100%;border:1px solid #e2e8f0;border-radius:9px;padding:8px 12px;background:#fff;font-size:14px}
+.inp:focus{outline:none;border-color:#94a3b8}
+.swatch{-webkit-appearance:none;appearance:none;width:22px;height:22px;border:0;padding:0;border-radius:9999px;background:none;cursor:pointer}
+.swatch::-webkit-color-swatch-wrapper{padding:0}.swatch::-webkit-color-swatch{border:0;border-radius:9999px}.swatch::-moz-color-swatch{border:0;border-radius:9999px}
+.ib{border-radius:7px;padding:4px;color:#94a3b8}.ib:hover{background:#f1f5f9;color:#334155}
+.row.over{outline:1px dashed #94a3b8}
+@media print{.no-print{display:none!important}body{background:#fff}.sec{border-color:#e2e8f0}}
+.lim{max-width:760px;margin-left:auto;margin-right:auto;width:100%}
+.datebox{position:relative;display:block;cursor:pointer}.datebox .dlbl{display:block;min-height:38px}.datebox input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.mock-badge{display:inline-flex;align-items:center;gap:6px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:9999px;padding:3px 12px;font-size:12px;font-weight:700}
+.mock-badge i{width:7px;height:7px;border-radius:9999px;background:#F59E0B;display:inline-block}
+</style>
 </head>
-<body>
-
-  <div class="top-bar">
-    <div class="top-inner">
-      <div>
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <span style="font-size:20px;">🚆</span>
-          <span style="font-size:18px; font-weight:700;">ระบบจัดแบ่งโควตาการขนส่งทางรถไฟ</span>
-          <span class="badge-demo">โหมดตัวอย่าง (Mockup สำหรับฝึกงาน)</span>
-        </div>
-        <div style="font-size:12px; color:#94A3B8; margin-top:2px;">แผนเปิดจองโควตาประจำวัน • ความจุมาตรฐาน 35 บทต./ขบวน</div>
+<body class="antialiased">
+<div class="max-w-6xl mx-auto px-3 py-6 sm:py-10 space-y-5">
+  <header class="lim">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="min-w-0">
+        <div class="mock-badge no-print"><i></i>โหมดตัวอย่าง (Mockup สำหรับฝึกงาน)</div>
+        <h1 class="text-lg sm:text-xl font-semibold tracking-tight mt-2">🚆 แผนเปิดจองโควตาแคร่รถไฟประจำวัน</h1>
       </div>
-      <button onclick="resetDemo()" class="btn" style="background:#1E293B; color:#E2E8F0; border-color:#334155;">↻ รีเซ็ตตัวอย่าง</button>
+      <button id="resetDemo" class="btn no-print" title="คืนค่าตัวอย่างเริ่มต้นทั้งหมด">↺ รีเซ็ตค่าตัวอย่าง</button>
+    </div>
+    <p class="text-sm text-slate-400 mt-1">35 แคร่ต่อขบวน · ขาออก 4431–4459 ⇄ ขาเข้า 4432–4460 · ข้อมูลหน้านี้ไม่ถูกบันทึกลงเครื่อง (รีโหลดหน้า = กลับค่าตัวอย่าง)</p>
+  </header>
+
+  <div id="pBook" class="space-y-5">
+    <section class="sec no-print lim">
+      <div class="lbl">วันที่ทำการจอง</div>
+      <label class="datebox"><span class="inp dlbl"></span><input type="date" id="bdate"></label>
+      <div id="bstatus" class="text-sm text-slate-600 mt-3"></div>
+      <div id="btabs" class="flex flex-wrap gap-2 mt-3"></div>
+    </section>
+    <div id="bEditor" class="space-y-5">
+      <section class="sec no-print lim">
+        <div class="flex justify-between items-baseline"><div class="lbl">ขบวนที่เปิดจอง (คู่ขาออก ⇄ ขาเข้า)</div><div id="capinfo" class="text-sm text-slate-500"></div></div>
+        <div class="grid sm:grid-cols-[auto_1fr] gap-4 items-end mb-4">
+          <label class="text-sm text-slate-600">จำนวนขบวนที่เปิดจอง (ขาออก = ขาเข้า)<input id="nOpen" type="number" min="0" max="15" class="inp mt-1" style="width:120px;text-align:center"></label>
+          <div class="text-xs text-slate-400">เช่น กรอก 10 = เปิดจอง 10 ขบวนขาออก + 10 ขบวนขาเข้า (รวม 20 ขบวนไป-กลับ) โควตาแต่ละบริษัทคำนวณอัตโนมัติ (Largest Remainder)</div>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4"><div class="text-xs text-slate-500 mb-2">ข้อความแจ้งลูกค้า (ส่ง LINE)</div>
+          <pre id="lineTxt" class="text-sm whitespace-pre-wrap" style="font-family:inherit"></pre>
+          <button class="btn mt-2" id="lineCopy">คัดลอกข้อความส่ง LINE</button></div>
+        <div id="trains"></div>
+        <div class="flex flex-wrap gap-2 mt-3"><button class="btn" data-all="on" data-ctx="book">เปิดเดินทั้งหมด</button><button class="btn" data-all="off" data-ctx="book">งดเดินทั้งหมด</button></div>
+        <div class="text-xs text-slate-400 mt-3">กดงดขบวนขาออก = งดขบวนขาเข้าที่คู่กันอัตโนมัติ · กดที่ขบวนขาเข้าโดยตรงเพื่อแก้ข้อยกเว้นเฉพาะขาเข้า</div>
+      </section>
+      <section class="sec no-print lim">
+        <div class="flex justify-between items-baseline"><div class="lbl">โควตาเปิดจอง</div><div id="qnote" class="text-xs text-slate-400"></div></div>
+        <div id="baseinfo" class="text-xs text-slate-400 mb-4"></div>
+        <div id="quota" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+        <div id="rnote" class="mt-3 text-xs text-slate-400"></div>
+        <div id="valid" class="mt-2 text-sm"></div>
+      </section>
+      <section class="sec no-print lim">
+        <div class="lbl">ลำดับขบวนแรก</div>
+        <div class="grid sm:grid-cols-2 gap-4 text-sm text-slate-500">
+          <label>บริษัทแรกของวันนี้<select id="st" class="inp mt-1"></select></label>
+          <label>บริษัทแรกของวันถัดไป<select id="sn" class="inp mt-1"></select></label>
+        </div>
+        <div id="stnote" class="text-xs text-slate-400 mt-3"></div>
+        <div class="flex flex-wrap items-center gap-2 mt-5"><button id="go" class="btn btn-dark">จัดตารางเปิดจอง</button><span id="pstat" class="text-xs text-slate-400 ml-1"></span></div>
+      </section>
+      <div id="result"></div>
     </div>
   </div>
+  <div id="toast" class="no-print fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-slate-900 text-white px-4 py-2 text-sm hidden"></div>
+</div>
+<script>
+const TR=[4431,4433,4435,4437,4439,4441,4443,4445,4447,4449,4451,4453,4455,4457,4459];
+const CO=['SSS','ESCO','ECTT','NICD'],CAP=35;
+const DEF=['#2563EB','#059669','#D97706','#7C3AED'];
+const $=id=>document.getElementById(id);
+const nz=r=>r.filter(x=>x>0).length;
+const IC={
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  warn:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4M12 17h.01"/>',
+  copy:'<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  print:'<path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/>',
+  lock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  unlock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
+  up:'<path d="m18 15-6-6-6 6"/>',
+  down:'<path d="m6 9 6 6 6-6"/>',
+  edit:'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  dice:'<rect width="18" height="18" x="3" y="3" rx="3"/><path d="M8 8h.01M16 8h.01M8 16h.01M16 16h.01M12 12h.01"/>'
+};
+const ic=(n,c='w-4 h-4')=>`<svg class="${c} inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
 
-  <div class="container">
+/* ---------- State (หน่วยความจำเท่านั้น ไม่ใช้ localStorage) ---------- */
+const DAYS=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+const MON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const DEFWEEK=[[140,140,140,105],[175,105,140,105],[140,175,105,105],[105,140,140,140],[150,120,135,120],[160,130,120,115],[130,150,125,120]];
+const DEMO_DATE='2026-11-26';   // 26 พ.ย. 69 (พฤหัสบดี) → เปิดจองของวันศุกร์ 27 พ.ย. 69
+const pad=n=>String(n).padStart(2,'0');
+const toISO=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseD=iso=>{const [y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(iso,n)=>{const d=parseD(iso);d.setDate(d.getDate()+n);return toISO(d)};
+const wIdx=iso=>(parseD(iso).getDay()+6)%7;
+const short=iso=>{const d=parseD(iso);return `${d.getDate()} ${MON[d.getMonth()]} ${String(d.getFullYear()+543).slice(-2)}`};
+const dateLbl=iso=>iso?short(iso):'เลือกวันที่';
+function setDate(id,v){const el=document.getElementById(id);if(!el)return;el.value=v||'';const l=el.parentNode.querySelector('.dlbl');if(l)l.textContent=dateLbl(v);}
+document.addEventListener('click',e=>{const t=e.target;if(t&&t.matches&&t.matches('.datebox input')&&t.showPicker){try{t.showPicker();}catch(_){}}});
+document.addEventListener('change',e=>{const t=e.target;if(t&&t.matches&&t.matches('.datebox input')){const l=t.parentNode.querySelector('.dlbl');if(l)l.textContent=dateLbl(t.value);}},true);
+const INB=TR.map(t=>t+1);
+const fmt=iso=>`${short(iso)} (วัน${DAYS[wIdx(iso)]})`;
+const targets=b=>{const w=wIdx(b);return w<=4?[addDays(b,1)]:w===5?[addDays(b,1),addDays(b,2)]:[]};
+// Largest Remainder: เปรียบเทียบเศษทศนิยมเต็มความละเอียดด้วยเลขจำนวนเต็ม
+function scale(w,T){
+  const B=w.reduce((a,b)=>a+b,0),adj=[],ids=[0,1,2,3];
+  if(!B||!T)return {q:[0,0,0,0],adj,raw:[0,0,0,0]};
+  const fn=i=>(w[i]*T)%B,fl=i=>(w[i]*T-fn(i))/B;
+  const raw=w.map(x=>x*T/B),q=ids.map(i=>fn(i)*2>=B?fl(i)+1:fl(i));
+  let diff=T-q.reduce((a,b)=>a+b,0);
+  while(diff!==0){
+    const up=diff>0;
+    let cand=up?ids.filter(i=>w[i]>0&&q[i]===fl(i)&&fn(i)>0):ids.filter(i=>q[i]>0&&q[i]===fl(i)+1);
+    if(!cand.length)cand=up?ids.filter(i=>w[i]>0):ids.filter(i=>q[i]>0);
+    cand.sort(up?(a,b)=>fn(b)-fn(a)||w[a]-w[b]||a-b:(a,b)=>fn(a)-fn(b)||w[b]-w[a]||a-b);
+    const c=cand[0];
+    adj.push({c,d:up?1:-1,tie:cand.length>1&&fn(cand[1])===fn(c)});
+    q[c]+=up?1:-1;diff+=up?-1:1;
+  }
+  return {q,adj,raw};
+}
+function roundNote(r){
+  if(!r.adj.length)return 'ปัดเศษแล้วผลรวมลงตัวพอดี ไม่ต้องปรับ';
+  const t={};r.adj.forEach(a=>{t[a.c]=(t[a.c]||0)+a.d});
+  const txt=Object.keys(t).map(c=>`${t[c]>0?'+':''}${t[c]} แคร่${t[c]>0?'ให้':'จาก'} ${CO[c]}`).join(', ');
+  const tie=r.adj.find(a=>a.tie);
+  return `คำนวณตามทศนิยม: ${txt}`+(tie?` (เศษทศนิยมเท่ากัน → เลือกบริษัทที่โควตา${tie.d>0?'น้อย':'มาก'}กว่า)`:'');
+}
 
-    <!-- Step 1 -->
-    <div class="grid-top">
-      <div class="card" style="margin-bottom:0;">
-        <div class="card-header">
-          <span class="card-title">1. กำหนดรอบวัน จำนวนขบวน และโควตาเปิดจอง</span>
-          <span style="font-size:12px; color:#64748B;">ทดลองแก้ตัวเลขได้อิสระ</span>
-        </div>
+let S,DB,RES=null,DRAG=null;
+function initState(){
+  S={open:{},q:[140,140,140,105],st:0,sn:1,colors:DEF.slice(),edited:false,stAuto:true,inOpen:{},bdate:DEMO_DATE,tdate:null};
+  TR.forEach(t=>{S.open[t]=true;S.inOpen[t+1]=true;});
+  DB={plans:{}};RES=null;DRAG=null;
+  S.tdate=targets(S.bdate)[0]||null;
+}
+const baseFor=d=>DEFWEEK[wIdx(d)];
+const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const persist=()=>{};   // Mockup: ไม่บันทึกลง localStorage
+function save(){if(S.tdate)(DB.plans[S.tdate]=DB.plans[S.tdate]||{}).inp={open:Object.assign({},S.open),q:S.q.slice(),edited:S.edited,st:S.st,sn:S.sn,stAuto:S.stAuto,inOpen:Object.assign({},S.inOpen)};}
+const openList=()=>TR.filter(t=>S.open[t]);
+const sums=()=>S.q.reduce((a,b)=>a+b,0);
+const planOf=d=>DB.plans[d]&&DB.plans[d].plan;
+/* ---------- Solver ---------- */
+// all mixed row vectors (2-3 companies, sum 35)
+const V=[],IDX=new Map();
+(function(){for(let a=0;a<=CAP;a++)for(let b=0;a+b<=CAP;b++)for(let c=0;a+b+c<=CAP;c++){
+  const d=CAP-a-b-c,v=[a,b,c,d],k=nz(v);if(k>=2&&k<=3)V.push(v);}
+  const sp=v=>{const x=v.filter(y=>y>0);return Math.max(...x)-Math.min(...x)};
+  V.sort((p,q)=>nz(p)-nz(q)||sp(p)-sp(q));V.forEach((v,i)=>IDX.set(v.join(),i));})();
 
-        <div class="grid-3">
-          <div class="field-box">
-            <label class="field-label">📅 วันที่ทำการจอง</label>
-            <input type="date" id="bookingDate" value="2026-11-26" onchange="updateDateDisplay()" class="input-box" style="font-weight:500;">
-            <div id="thaiDateLabel" style="font-size:12px; font-weight:700; color:#2563EB; margin-top:5px;">เปิดจองของ: ศุกร์ที่ 27 พ.ย. 69</div>
-          </div>
+function groupings(r,m,only2){
+  const out=[];let nodes=0;
+  if(m===0)return r.every(x=>x===0)?[[[],0]]:[];
+  (function rec(rem,left,prev,acc){
+    if(nodes>3e6||out.length>20000)return;
+    if(left===1){const i=IDX.get(rem.join());if(i!==undefined&&i>=prev&&(!only2||nz(V[i])===2))out.push(acc.concat([rem]));return;}
+    for(let i=prev;i<V.length;i++){nodes++;const v=V[i];
+      if(only2&&nz(v)!==2)continue;
+      if(v[0]<=rem[0]&&v[1]<=rem[1]&&v[2]<=rem[2]&&v[3]<=rem[3])rec(rem.map((x,j)=>x-v[j]),left-1,i,acc.concat([v]));
+      if(nodes>3e6)return;}
+  })(r,m,0,[]);
+  const cost=g=>g.reduce((a,v)=>a+(nz(v)===3?1e3+Math.max(...v)-Math.min(...v.filter(x=>x>0)):0),0);
+  return out.map(g=>[g,cost(g)]).sort((a,b)=>a[1]-b[1]).slice(0,25);
+}
 
-          <div class="field-box">
-            <label class="field-label">🔢 ขบวนเปิดจอง (เที่ยวเดียว)</label>
-            <input type="number" id="openTrainCount" value="10" min="0" max="15" oninput="handleTrainCountChange()" class="input-box">
-            <div id="roundTripLabel" style="font-size:12px; color:#64748B; margin-top:5px;">รวม 20 ขบวนไป-กลับ (350 บทต.)</div>
-          </div>
+function sequence(types,cnt,n,cfg,cyc,tom,present,cap,K,fixed,strict){
+  const k=cyc.length,last=[-1,-1,-1,-1],order=[],sols=[];let thr=Infinity,nodes=0;
+  const chk=(R,t)=>{let v=0;
+    // ติดกันได้ 2-3 ขบวน: 2 ขบวน = ขบวนใดขบวนหนึ่งของบริษัทนั้น ≤15 แคร่ | 3 ขบวน = ขบวนตรงกลาง ≤10 แคร่ | 4 ขบวนขึ้นไปห้าม
+    if(t>=1){const p1=order[t-1],p2=t>=2?order[t-2]:null,p3=t>=3?order[t-3]:null;
+      for(let c=0;c<4;c++){if(R[c]>0&&p1[c]>0){
+        const run=p2&&p2[c]>0?(p3&&p3[c]>0?4:3):2;
+        const ok=run===2?Math.min(R[c],p1[c])<=15:run===3?p1[c]<=10:false;
+        if(!ok){if(cfg.adj)return -1;v++;break;}}}}
+    if(t<k){const c=cyc[t];if(strict[c]?R[c]!==CAP:!(R[c]>0)){if(cfg.f4)return -1;v++;}}
+    if(t===n-1&&tom>=0&&R[tom]>0){if(cfg.bd)return -1;v++;}
+    return v;};
+  const place=(R,t,mx,sq)=>{let m=mx,s=sq;R.forEach((x,c)=>{if(x>0){const g=t-last[c];if(g>m)m=g;s+=g*g;last[c]=t;}});return [m,s];};
+  (function dfs(t,prev,mx,sq,viol){
+    if(nodes++>cap)return;
+    if(t===n){let m=mx,s=sq;for(let c=0;c<4;c++)if(present[c]){const g=n-last[c];if(g>m)m=g;s+=g*g;}
+      const sc=viol*1e6+m*1e4+s;
+      if(sc<thr){sols.push({order:order.slice(),score:sc});sols.sort((a,b)=>a.score-b.score);if(sols.length>K)sols.pop();if(sols.length>=K)thr=sols[K-1].score;}
+      return;}
+    if(fixed[t]){const R=fixed[t],v=chk(R,t,prev);if(v<0)return;const sv=last.slice(),[m2,q2]=place(R,t,mx,sq);
+      if(m2*1e4+q2+(viol+v)*1e6<thr){order[t]=R;dfs(t+1,R,m2,q2,viol+v);}
+      for(let c=0;c<4;c++)last[c]=sv[c];return;}
+    const cs=[];
+    for(let i=0;i<types.length;i++){if(cnt[i]<=0)continue;const R=types[i],v=chk(R,t,prev);if(v<0)continue;
+      let st=0;R.forEach((x,c)=>{if(x>0)st+=t-last[c]});cs.push([i,v,st]);}
+    cs.sort((a,b)=>b[2]-a[2]);
+    for(const [i,v] of cs){const R=types[i],sv=last.slice(),[m2,q2]=place(R,t,mx,sq);
+      if(m2*1e4+q2+(viol+v)*1e6<thr){cnt[i]--;order[t]=R;dfs(t+1,R,m2,q2,viol+v);cnt[i]++;}
+      for(let c=0;c<4;c++)last[c]=sv[c];}
+  })(0,null,0,0,0);
+  return sols;
+}
 
-          <div class="field-box">
-            <label class="field-label">🔄 ลำดับขบวนแรก</label>
-            <select id="firstCompany" onchange="generatePlans()" class="input-box" style="cursor:pointer;">
-              <option value="SSS">SSS (เริ่มคิว 1)</option>
-              <option value="ESCO">ESCO (เริ่มคิว 2)</option>
-              <option value="ECTT">ECTT (เริ่มคิว 3)</option>
-              <option value="NICD">NICD (เริ่มคิว 4)</option>
-            </select>
-            <div id="queueHint" style="font-size:11px; color:#64748B; margin-top:5px;">คิว: SSS → ESCO → ECTT → NICD</div>
-          </div>
-        </div>
+function pickVariants(all){
+  const mv=Math.min(...all.map(a=>Math.floor(a.score/1e6)));
+  const L=all.filter(a=>Math.floor(a.score/1e6)===mv).sort((a,b)=>a.tot-b.tot);
+  const by=new Map();L.forEach(a=>{if(!by.has(a.key))by.set(a.key,[]);by.get(a.key).push(a)});
+  const lists=[...by.values()],out=[],seen=new Set();
+  for(let d=0;out.length<5;d++){let add=false;
+    for(const l of lists){const a=l[d];if(!a)continue;add=true;
+      const sg=a.rows.map(r=>r.join()).join('|');if(seen.has(sg))continue;seen.add(sg);out.push(a);if(out.length>=5)break;}
+    if(!add)break;}
+  const mgs=out.map(a=>Math.floor((a.score%1e6)/1e4)),minMg=Math.min(...mgs);
+  out.forEach((a,i)=>{
+    const mixes=[...new Set(a.rows.filter(r=>nz(r)>1).map(r=>r.map((x,c)=>x?CO[c]+x:'').filter(Boolean).join('+')))];
+    a.desc=(i===0?'แนะนำ: ':'')+(mgs[i]===minMg?'กระจายรอบสม่ำเสมอที่สุด ':'')+`(Max Gap ${mgs[i]})`
+      +(mixes.length?' · จับคู่ผสม '+mixes.join(' , '):' · ขบวนเดี่ยวทั้งหมด')+(mv?' · มีเงื่อนไขที่ผ่อนผัน':'');});
+  return out;
+}
 
-        <div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
-            <span style="font-size:13px; font-weight:700;">โควตาแต่ละบริษัท (หน่วย: บทต.)</span>
-            <span id="quotaStatus" style="font-size:12px; font-weight:700; padding:2px 10px; border-radius:999px; background:#ECFDF5; color:#059669; border:1px solid #A7F3D0;">
-              ✓ รวม 350 / 350 บทต. (ครบพอดี)
-            </span>
-          </div>
+function solve(n,q,st,sn,fixed){
+  fixed=fixed||[];
+  const qf=q.slice();fixed.forEach(R=>{if(R)R.forEach((x,c)=>qf[c]-=x)});
+  if(qf.some(x=>x<0))return null;
+  if(fixed.filter(Boolean).length===n)return [{rows:fixed.slice(),score:0,desc:'ล็อกครบทุกขบวนแล้ว'}];
+  const cyc=[];for(let i=0;i<4;i++){const c=(st+i)%4;if(q[c]>0)cyc.push(c);}
+  const present=q.map(x=>x>0),strict=q.map(x=>x>=CAP),dl=Date.now()+4500;
+  const p0=qf.map(x=>Math.floor(x/CAP)),r0=qf.map(x=>x%CAP);
+  const breaks=[[[]]];
+  breaks.push(p0.map((p,c)=>p>0?[c]:null).filter(Boolean));
+  const b2=[];for(let a=0;a<4;a++)for(let b=a;b<4;b++){const pp=p0.slice();pp[a]--;pp[b]--;if(pp[a]>=0&&pp[b]>=0)b2.push([a,b]);}
+  breaks.push(b2);
+  const levels=[{adj:1,f4:1,bd:1,mix:1},{adj:1,f4:1,bd:0,mix:1},{adj:1,f4:0,bd:0,mix:1},{adj:0,f4:0,bd:0,mix:1},{adj:0,f4:0,bd:0,mix:0}];
+  const R0=Math.round(r0.reduce((a,x)=>a+x,0)/CAP);
+  for(let li=0;li<levels.length;li++){
+    const cfg=levels[li],fin=li===levels.length-1,pool=[];
+    // กฎขบวนผสม (mix=1): ไม่เกิน 3 ขบวน และถ้าเป็น 3 ขบวนแต่ละขบวนผสมไม่เกิน 2 บริษัท | แยกขบวนเต็ม 1 ขบวนเพิ่มได้ถ้าช่วยให้การกระจายดีขึ้น
+    const bMax=cfg.mix?Math.max(0,Math.min(1,3-R0)):0;
+    for(let b=0;b<=bMax;b++){
+      if(!fin&&Date.now()>dl)break;
+      for(const br of breaks[b]){
+        const p=p0.slice(),r=r0.slice();br.forEach(c=>{p[c]--;r[c]+=CAP;});
+        const m=r.reduce((a,x)=>a+x,0)/CAP;if(!Number.isInteger(m)||m>5)continue;
+        if(cfg.mix&&m>3)continue;
+        const gs=groupings(r,m,cfg.mix&&m>=3),K=Math.max(2,Math.min(5,Math.ceil(10/Math.max(1,gs.length))));
+        for(const [g,gc] of gs){
+          if(!fin&&Date.now()>dl)break;
+          const types=[],cnt=[];
+          p.forEach((x,c)=>{if(x>0){const v=[0,0,0,0];v[c]=CAP;types.push(v);cnt.push(x);}});
+          g.forEach(v=>{const i=types.findIndex(t=>t.join()===v.join());if(i>=0)cnt[i]++;else{types.push(v);cnt.push(1);}});
+          const key=g.map(v=>v.join()).sort().join('|'),three=Math.floor(gc/1e3),spread=gc%1e3;
+          for(const sq of sequence(types,cnt,n,cfg,cyc,sn,present,fin?200000:30000,K,fixed,strict))
+            // เรียงตามความสม่ำเสมอของการกระจายรอบก่อน (Max Gap, ผลรวมกำลังสอง) แล้วค่อยดูจำนวนขบวนผสม/บริษัทที่ผสม
+            pool.push({rows:sq.order,score:sq.score,tot:sq.score+three*0.05+g.length*0.02+spread*0.0003,key});
+        }
+      }
+    }
+    if(pool.length)return pickVariants(pool);
+  }
+  return null;
+}
 
-          <div class="grid-4">
-            <div id="card-SSS" class="co-card" style="border-top:4px solid #2563EB;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-weight:700; font-size:14px;">SSS</span>
-                <input type="color" id="color-SSS" value="#2563EB" onchange="updateColors()" style="width:20px; height:20px; border:none; background:none; cursor:pointer;">
-              </div>
-              <input type="number" id="quota-SSS" value="125" min="0" oninput="handleManualQuota()" class="input-box">
-            </div>
+/* ---------- Checks ---------- */
+function analyze(rows,ol,q,st,sn,locks){
+  const n=rows.length,cyc=[];for(let i=0;i<4;i++){const c=(st+i)%4;if(q[c]>0)cyc.push(c);}
+  const R0=q.reduce((a,x)=>a+x%CAP,0)/CAP,nl=Object.keys(locks||{}).length;
+  const f4=cyc.every((c,i)=>i>=n||(q[c]>=CAP?rows[i][c]===CAP:rows[i][c]>0));
+  const exc=cyc.filter(c=>q[c]<CAP).map(c=>CO[c]),short4=n<4;
+  const mixed=rows.filter(r=>nz(r)>1).length,three=rows.filter(r=>nz(r)>2).length;
+  const bad=[];for(let i=1;i<n;i++){let b1=false;for(let c=0;c<4;c++){if(rows[i][c]>0&&rows[i-1][c]>0){
+    const p2=i>=2?rows[i-2]:null,p3=i>=3?rows[i-3]:null,run=p2&&p2[c]>0?(p3&&p3[c]>0?4:3):2;
+    const ok=run===2?Math.min(rows[i][c],rows[i-1][c])<=15:run===3?rows[i-1][c]<=10:false;if(!ok)b1=true;}}
+    if(b1)bad.push(ol[i-1]+'-'+ol[i]);}
+  const bd=!(rows[n-1][sn]>0);
+  const okq=rows.every(r=>r.reduce((a,b)=>a+b,0)===CAP)&&CO.every((_,c)=>rows.reduce((a,r)=>a+r[c],0)===q[c]);
+  let worst=0,ideal=0;
+  const gaps=CO.map((_,c)=>{const idx=[];rows.forEach((r,i)=>{if(r[c]>0)idx.push(i)});
+    let mg=0;for(let i=1;i<idx.length;i++)mg=Math.max(mg,idx[i]-idx[i-1]);
+    if(idx.length){let e=Math.max(idx[0]+1,n-idx[idx.length-1]);for(let i=1;i<idx.length;i++)e=Math.max(e,idx[i]-idx[i-1]);
+      const id=Math.ceil((n+1)/(idx.length+1));if(e-id>worst-ideal||!worst){worst=e;ideal=id;}}
+    return {c,idx,mg};});
+  return {gaps,checks:[
+    {ok:f4&&!exc.length&&!short4,t:'4 ขบวนแรกเป็นขบวนเดี่ยวเรียงตามคิว',d:(f4?`เริ่ม ${CO[st]} เรียง ${cyc.map(c=>CO[c]).join(' → ')} เป็นขบวนเดี่ยว 35 แคร่`:'4 ขบวนแรกไม่เป็นขบวนเดี่ยวตามลำดับคิว')+(exc.length?` · ข้อยกเว้น: ${exc.join(', ')} โควตาไม่ถึง 35 แคร่`:'')+(short4?' · เปิดเดินไม่ถึง 4 ขบวน':'')},
+    {ok:(mixed<=2&&rows.every(r=>nz(r)<=3))||(mixed===3&&rows.filter(r=>nz(r)>1).every(r=>nz(r)<=2)),t:'ขบวนผสมน้อยที่สุด',d:`ผสม ${mixed} ขบวน (ผสม 3 บริษัท ${three} ขบวน) · ขั้นต่ำตามโควตา ${R0} · กติกา: ไม่เกิน 2 ขบวน หรือ 3 ขบวนโดยแต่ละขบวนผสมไม่เกิน 2 บริษัท`},
+    {ok:worst-ideal<=1,t:'กระจายรอบสม่ำเสมอ',d:`ทิ้งช่วงสูงสุด ${worst} ขบวน (ดีที่สุดโดยประมาณ ${ideal})`},
+    {ok:!bad.length,t:'กฎการขึ้นติดกัน',d:bad.length?'ติดกันเกินเงื่อนไข (2 ขบวน: ขบวนใดขบวนหนึ่ง ≤15 แคร่ · 3 ขบวน: ขบวนกลาง ≤10 แคร่): '+bad.join(', '):'ไม่มีบริษัทซ้ำติดกัน หรือติดกันตามเงื่อนไข (2 ขบวนมี ≤15 แคร่ / 3 ขบวนกลาง ≤10 แคร่)'},
+    {ok:bd,t:'รอยต่อวันถัดไป',d:bd?`ขบวนสุดท้ายไม่มี ${CO[sn]}`:`ขบวนสุดท้ายมี ${CO[sn]}`},
+    {ok:okq,t:'โควตาและการล็อก',d:okq?`ตรงโควตาครบ${nl?` · ล็อก ${nl} ขบวน`:''}`:'ยอดไม่ตรงโควตา'}]};
+}
 
-            <div id="card-ESCO" class="co-card" style="border-top:4px solid #059669;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-weight:700; font-size:14px;">ESCO</span>
-                <input type="color" id="color-ESCO" value="#059669" onchange="updateColors()" style="width:20px; height:20px; border:none; background:none; cursor:pointer;">
-              </div>
-              <input type="number" id="quota-ESCO" value="85" min="0" oninput="handleManualQuota()" class="input-box">
-            </div>
+/* ---------- UI ---------- */
+const applyColors=()=>CO.forEach((_,i)=>document.documentElement.style.setProperty('--c'+i,S.colors[i]));
+function flash(m){const e=$('toast');e.textContent=m;e.classList.remove('hidden');setTimeout(()=>e.classList.add('hidden'),2400);}
+function updatePlanStatus(){
+  const p=S.tdate&&planOf(S.tdate);
+  $('pstat').innerHTML=p?`✓ มีแผนเปิดจองที่บันทึกไว้ ${p.ol.length} ขบวน · <button class="underline" id="pdel">ลบแผน</button>`:'ยังไม่มีแผนเปิดจองที่บันทึกไว้';
+}
+function clearRes(){RES=null;$('result').innerHTML='';updatePlanStatus();}
+const badge=(c,x)=>`<span class="inline-flex items-center gap-1.5 text-xs rounded-full px-2 py-0.5" style="background:color-mix(in srgb,var(--c${c}) 14%,white);color:color-mix(in srgb,var(--c${c}) 70%,black)"><i class="inline-block w-1.5 h-1.5 rounded-full" style="background:var(--c${c})"></i>${CO[c]} ${x}</span>`;
+const stackBadges=r=>`<div class="flex flex-col items-start gap-0.5">${r.map((x,c)=>x>0?badge(c,x):'').join('')}</div>`;
+const joinBadges=r=>r.map((x,c)=>x>0?badge(c,x):'').filter(Boolean).join('<span class="text-slate-300 text-xs">|</span>');
+const chkHtml=a=>a.map(c=>`<div class="flex gap-3 py-2 text-sm"><span class="${c.ok?'text-emerald-500':'text-red-500'} mt-0.5">${ic(c.ok?'check':'warn')}</span><div><div>${c.t}</div><div class="text-slate-400 text-xs">${c.d}</div></div></div>`).join('');
+function companySummary(R){
+  const T=R.total||R.ol.length*CAP;
+  return CO.map((name,c)=>{const g=R.gaps[c],full=R.rows.filter(r=>r[c]===CAP).length,mix=R.rows.filter(r=>r[c]>0&&r[c]<CAP).length;
+    return {c,name,q:R.q[c],full,mix,n:full+mix,pct:T?(R.q[c]/T*100).toFixed(2):'0.00',trains:g.idx.map(i=>R.ol[i]).join(', '),mg:g.mg};});
+}
+function summaryHtml(R,title){
+  const T=R.total||R.ol.length*CAP,cs=companySummary(R);
+  const body=cs.map(x=>`<tr class="border-b border-slate-100 align-top"><td class="py-2 pr-3 whitespace-nowrap" ${x.c===R.first?'style="background:#FEF08A"':''}><i class="inline-block w-2 h-2 rounded-full mr-1.5" style="background:var(--c${x.c})"></i>${x.name}</td>
+    <td class="py-2 pr-3 whitespace-nowrap">${x.q} แคร่</td><td class="py-2 pr-3 whitespace-nowrap">${x.n} ขบวน${x.mix?` <span class="text-slate-400">(${x.full} เต็ม + ${x.mix} ผสม)</span>`:''}</td>
+    <td class="py-2 pr-3">${x.pct}%</td><td class="py-2 pr-3 text-slate-500">${x.trains||'-'}</td><td class="py-2 text-right">${x.mg||'-'}</td></tr>`).join('')
+    +`<tr class="text-slate-500"><td class="pt-2 pr-3">รวม</td><td class="pt-2 pr-3">${T} แคร่</td><td class="pt-2 pr-3">${R.ol.length} ขบวน</td><td class="pt-2 pr-3">100%</td><td></td><td></td></tr>`;
+  return `<section class="sec"><div class="lbl">${title}</div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-xs text-slate-400"><tr><th class="text-left font-normal pb-1">บริษัท</th><th class="text-left font-normal pb-1">โควตา</th><th class="text-left font-normal pb-1">ขบวนที่ลง</th><th class="text-left font-normal pb-1">สัดส่วน</th><th class="text-left font-normal pb-1">เลขขบวน</th><th class="text-right font-normal pb-1">ห่างสูงสุด</th></tr></thead><tbody>${body}</tbody></table></div></section>`;
+}
+function pairPills(isOut,isIn,aOut,aIn){
+  const pill=(no,on,attr)=>`<button ${attr}="${no}" title="${attr==='data-t'||attr==='data-at'?no+' ⇄ '+(no+1):(no-1)+' ⇄ '+no}" class="rounded-full border px-2 py-0.5 text-xs tabular-nums ${on?'border-slate-400 text-slate-900 bg-white':'border-red-200 text-red-400 bg-red-50 line-through'}">${no}</button>`;
+  const row=(label,list)=>`<div class="mb-2"><div class="text-xs font-semibold text-slate-600 mb-1">${label}</div><div class="flex flex-wrap gap-1.5">${list}</div></div>`;
+  return row('ขาออก (15 ขบวน: 4431–4459)',TR.map(t=>pill(t,isOut(t),aOut)).join(''))+row('ขาเข้า (15 ขบวน: 4432–4460)',INB.map(t=>pill(t,isIn(t),aIn)).join(''));
+}
 
-            <div id="card-ECTT" class="co-card" style="border-top:4px solid #D97706;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-weight:700; font-size:14px;">ECTT</span>
-                <input type="color" id="color-ECTT" value="#D97706" onchange="updateColors()" style="width:20px; height:20px; border:none; background:none; cursor:pointer;">
-              </div>
-              <input type="number" id="quota-ECTT" value="80" min="0" oninput="handleManualQuota()" class="input-box">
-            </div>
+/* ----- Booking tab: head / editor ----- */
+function renderBookHead(){
+  setDate('bdate',S.bdate);const t=targets(S.bdate),w=wIdx(S.bdate);
+  $('bstatus').innerHTML=w===6?'<span class="text-red-600">วันอาทิตย์ปิดทำการจอง (จองล่วงหน้าไปแล้วในวันเสาร์)</span>'
+    :w===5?`เปิดจองโควตาของ <b>วันอาทิตย์</b> (${short(t[0])}) และ <b>วันจันทร์</b> (${short(t[1])})`
+    :`เปิดจองโควตาของวันถัดไป: <b>วัน${DAYS[wIdx(t[0])]}</b> (${short(t[0])})`;
+  $('btabs').innerHTML=t.length>1?t.map(d=>`<button data-bt="${d}" class="pill ${d===S.tdate?'on':''}">วัน${DAYS[wIdx(d)]} ${short(d)}${planOf(d)?' ✓':''}</button>`).join(''):'';
+  $('bEditor').classList.toggle('hidden',!S.tdate);
+}
+function prevRecord(d){
+  const ds=Object.keys(DB.plans).filter(x=>x<d&&(DB.plans[x].plan||(DB.plans[x].inp&&DB.plans[x].inp.st!==undefined))).sort();
+  if(!ds.length)return null;const x=ds[ds.length-1],src=DB.plans[x].plan||DB.plans[x].inp;
+  return {date:x,st:src.st,sn:src.sn};
+}
+function autoStart(d){const p=prevRecord(d),st=p?p.sn:0;return {st,sn:(st+1)%4,prev:p};}
+function loadEditor(d){
+  const rec=DB.plans[d],inp=rec&&rec.inp;RES=null;
+  if(inp){S.open=Object.assign({},inp.open);S.q=inp.q.slice();S.edited=!!inp.edited;S.st=inp.st;S.sn=inp.sn;S.stAuto=inp.stAuto===true;
+    S.inOpen=inp.inOpen?Object.assign({},inp.inOpen):(()=>{const o={};INB.forEach(t=>o[t]=S.open[t-1]!==false);return o;})();
+    if(S.stAuto&&!rec.plan){const a=autoStart(d);S.st=a.st;S.sn=a.sn;}}
+  else{S.open={};S.inOpen={};TR.forEach(t=>{S.open[t]=true;S.inOpen[t+1]=true;});rescale();const a=autoStart(d);S.st=a.st;S.sn=a.sn;S.stAuto=true;}
+}
+function updateStNote(){
+  if(!S.tdate)return;
+  const a=autoStart(S.tdate);
+  $('stnote').innerHTML=S.stAuto?`ลำดับอัตโนมัติ: ${a.prev?`ต่อจากวัน ${short(a.prev.date)} (บริษัทแรกของวันถัดไป = ${CO[a.prev.sn]})`:'ยังไม่มีประวัติ เริ่มที่ SSS'}`:'ตั้งค่าเอง · <button class="underline" id="streset">คืนค่าอัตโนมัติ</button>';
+}
+function renderBook(){
+  renderBookHead();
+  if(!S.tdate){RES=null;$('result').innerHTML='';return;}
+  buildInputs();renderTrains();updateQnote();
+  const p=planOf(S.tdate);
+  if(p){RES={vs:[{rows:p.rows.map(r=>r.slice()),desc:'แผนที่บันทึกไว้'}],cur:0,ol:p.ol.slice(),inOpen:(p.inOpen||p.ol.map(t=>t+1)).slice(),q:p.q.slice(),st:p.st,sn:p.sn,locks:p.locks||{},date:S.tdate,edit:null,saved:true};renderResult();}
+  else{RES=null;$('result').innerHTML='';}
+  updatePlanStatus();
+}
+function renderLineBox(){
+  if(!S.tdate||!$('lineTxt'))return;
+  const n=openList().length,m=INB.filter(t=>S.inOpen[t]!==false).length,d=parseD(S.tdate);
+  const dt=`${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()+543}`;
+  $('lineTxt').textContent=`วัน${DAYS[wIdx(S.tdate)]}ที่ ${dt} เปิดจองในโควตา ${n} ขบวน\n(${n+m} ขบวนไป-กลับ)\nSSS   = ${S.q[0]} บทต.\nESCO = ${S.q[1]} บทต.\nECTT = ${S.q[2]} บทต.\nNICD = ${S.q[3]} บทต.`;
+}
+function setOpenCount(N){
+  N=Math.max(0,Math.min(15,parseInt(N)||0));
+  TR.forEach((t,i)=>{S.open[t]=i<N;S.inOpen[t+1]=i<N;});    // เปิดจอง N ขบวนขาออก + N ขบวนขาเข้า (เรียงจากขบวนแรก)
+  rescale();save();clearRes();renderTrains();syncQuota();
+}
+function renderTrains(){
+  $('trains').innerHTML=pairPills(t=>S.open[t]!==false,t=>S.inOpen[t]!==false,'data-t','data-ti');
+  const n=openList().length,m=INB.filter(t=>S.inOpen[t]!==false).length;
+  $('capinfo').innerHTML=`ขาออก <b>${n}</b> ขบวน (<b>${n*CAP}</b> แคร่) · ขาเข้า <b>${m}</b> ขบวน`;
+  if($('nOpen'))$('nOpen').value=n;
+  renderValid();renderBase();renderLineBox();
+}
+function renderBase(){
+  if(!S.tdate)return;
+  const w=baseFor(S.tdate),B=w.reduce((a,b)=>a+b,0),n=openList().length;
+  $('baseinfo').textContent=B===0?'⚠ ไม่มีโควตาฐานของวันนี้':`โควตาฐานตัวอย่าง วัน${DAYS[wIdx(S.tdate)]}: ${CO.map((c,i)=>`${c} ${w[i]}`).join(' · ')} = ${B} แคร่${B!==525?' (ไม่ใช่ 525)':''} → ปรับตามจริงเป็น ${n*CAP} แคร่`;
+}
+function renderValid(){
+  const n=openList().length,cap=n*CAP,s=sums(),ok=n>0&&s===cap,v=$('valid');
+  v.className='mt-2 text-sm '+(ok?'text-slate-500':'text-red-600');
+  v.textContent=n===0?'ยังไม่ได้เลือกขบวนที่เปิดจอง':ok?`รวม ${s} แคร่ ตรงกับความจุ ${cap} แคร่`:`รวม ${s} แคร่ ไม่ตรงกับความจุ ${cap} แคร่ (${s>cap?'เกิน':'ขาด'} ${Math.abs(s-cap)})`;
+  $('go').disabled=!ok;
+}
+function buildInputs(){
+  $('quota').innerHTML=CO.map((c,i)=>`<div><div class="flex items-center gap-2 mb-1.5"><input type="color" data-c="${i}" value="${S.colors[i]}" class="swatch" title="เปลี่ยนสี ${c}"><span class="text-sm font-medium">${c}</span></div>
+    <input data-q="${i}" type="number" min="0" inputmode="numeric" value="${S.q[i]}" class="inp"></div>`).join('');
+  $('st').innerHTML=$('sn').innerHTML=CO.map((c,i)=>`<option value="${i}">${c}</option>`).join('');
+  $('st').value=S.st;$('sn').value=S.sn;updateStNote();
+}
+const rescale=()=>{if(!S.tdate)return;S.q=scale(baseFor(S.tdate),openList().length*CAP).q;S.edited=false;};
+function updateQnote(){
+  $('qnote').innerHTML=S.edited?'แก้ไขเอง · <button class="underline" id="qreset">คืนค่าอัตโนมัติ</button>':'คำนวณอัตโนมัติ';
+  if(S.edited||!S.tdate){$('rnote').textContent=S.edited?'โควตาถูกแก้ไขด้วยมือ':'';return;}
+  const r=scale(baseFor(S.tdate),openList().length*CAP);
+  $('rnote').textContent=(r.raw.some(x=>x)?'ค่าดิบ '+CO.map((c,i)=>`${c} ${r.raw[i].toFixed(3)}`).join(' · ')+' → ':'')+roundNote(r);
+}
+function syncQuota(){document.querySelectorAll('[data-q]').forEach(el=>el.value=S.q[el.dataset.q]);updateQnote();renderValid();renderLineBox();}
 
-            <div id="card-NICD" class="co-card" style="border-top:4px solid #7C3AED;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-weight:700; font-size:14px;">NICD</span>
+$('bdate').onchange=e=>{if(!e.target.value)return;S.bdate=e.target.value;const t=targets(S.bdate);
+  if(!t.includes(S.tdate)){S.tdate=t[0]||null;if(S.tdate)loadEditor(S.tdate);}persist();renderBook();};
+$('btabs').onclick=e=>{const b=e.target.closest('[data-bt]');if(!b)return;save();S.tdate=b.dataset.bt;loadEditor(S.tdate);persist();renderBook();};
+$('trains').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.t){const t=+b.dataset.t;S.open[t]=!S.open[t];S.inOpen[t+1]=S.open[t];rescale();}   // งดขาออก = งดขาเข้าที่คู่กันอัตโนมัติ
+  else if(b.dataset.ti){const t=+b.dataset.ti;S.inOpen[t]=!S.inOpen[t];}                          // ข้อยกเว้น: แก้เฉพาะขาเข้า
+  else return;
+  save();clearRes();renderTrains();syncQuota();};
+$('quota').oninput=e=>{const d=e.target.dataset;
+  if(d.c!==undefined){S.colors[d.c]=e.target.value;applyColors();persist();return;}
+  if(d.q!==undefined){S.q[d.q]=Math.max(0,parseInt(e.target.value)||0);S.edited=true;save();clearRes();renderValid();updateQnote();renderLineBox();}};
+$('qnote').onclick=e=>{if(e.target.id==='qreset'){rescale();save();clearRes();syncQuota();}};
+$('st').onchange=e=>{S.st=+e.target.value;S.sn=(S.st+1)%4;S.stAuto=false;$('sn').value=S.sn;save();clearRes();updateStNote();};
+$('sn').onchange=e=>{S.sn=+e.target.value;S.stAuto=false;save();clearRes();updateStNote();};
+$('stnote').onclick=e=>{if(e.target.id==='streset'){S.stAuto=true;const a=autoStart(S.tdate);S.st=a.st;S.sn=a.sn;save();clearRes();buildInputs();}};
+$('pstat').onclick=e=>{if(e.target.id==='pdel'){delete DB.plans[S.tdate].plan;persist();RES=null;$('result').innerHTML='';updatePlanStatus();renderBookHead();}};
+$('nOpen').onchange=e=>setOpenCount(e.target.value);
+$('lineCopy').onclick=()=>copy($('lineTxt').textContent,'คัดลอกข้อความส่ง LINE แล้ว');
+$('go').onclick=()=>{RES=null;recompute(false);};
+function recompute(rand){
+  const prev=RES,go=$('go'),ol=prev?prev.ol:openList(),locks=prev?prev.locks:{};
+  const inOpen=prev?prev.inOpen:INB.filter(t=>S.inOpen[t]!==false);
+  const q=prev?prev.q:S.q.slice(),st=prev?prev.st:S.st,sn=prev?prev.sn:S.sn,date=prev?prev.date:S.tdate;
+  go.disabled=true;go.textContent='กำลังคำนวณ…';
+  setTimeout(()=>{
+    const vs=solve(ol.length,q,st,sn,ol.map(t=>locks[t]||null));
+    go.textContent='จัดตารางเปิดจอง';renderValid();
+    if(!vs){if(prev)flash('ไม่พบแผนที่เข้ากับขบวนที่ล็อกไว้');else $('result').innerHTML='<div class="sec text-sm text-red-600">ไม่พบแผนที่เป็นไปได้ กรุณาปรับโควตาหรือขบวนที่เปิดจอง</div>';return;}
+    RES={vs,cur:0,ol,inOpen,q,st,sn,locks,date,edit:null,saved:false};
+    if(rand&&vs.length>1)RES.cur=1+Math.floor(Math.random()*(vs.length-1));
+    renderResult();
+  },30);
+}
+function setRows(rows,desc){RES.vs[RES.cur]={rows,desc};RES.saved=false;renderResult();}
+function swapRows(i,j){
+  const L=RES.locks,ol=RES.ol;if(i===j||L[ol[i]]||L[ol[j]])return;
+  const r=RES.rows.slice();[r[i],r[j]]=[r[j],r[i]];RES.edit=null;
+  setRows(r,`ปรับตำแหน่งเอง (อิงแบบที่ ${RES.cur+1})`);
+}
+function moveRow(i,d){const L=RES.locks,ol=RES.ol;if(L[ol[i]])return;let j=i+d;while(j>=0&&j<ol.length&&L[ol[j]])j+=d;if(j>=0&&j<ol.length)swapRows(i,j);}
+function editorHtml(i,r){
+  const pr=pairsOf(r);while(pr.length<3)pr.push(['',0]);const sum=r.reduce((a,b)=>a+b,0);
+  return `<div class="space-y-1" data-ed="${i}">${pr.map(([c,x])=>`<div class="flex items-center gap-1"><select data-e="c" class="inp" style="padding:2px 3px;font-size:12px;width:auto"><option value="">-</option>${CO.map((n,ci)=>`<option value="${ci}" ${c===ci?'selected':''}>${n}</option>`).join('')}</select><input data-e="q" type="number" min="0" max="${CAP}" value="${x||''}" class="inp" style="padding:2px 4px;font-size:12px;width:54px"></div>`).join('')}
+    <div class="text-xs ${sum===CAP?'text-emerald-600':'text-amber-600'}">รวม ${sum}/${CAP} <button class="underline" data-a="edone">เสร็จ</button></div></div>`;
+}
+function applyEdit(i,ed){
+  const v=[0,0,0,0];
+  ed.querySelectorAll('select[data-e="c"]').forEach((sel,k)=>{const q=parseInt(ed.querySelectorAll('input[data-e="q"]')[k].value)||0;if(sel.value!==''&&q>0)v[+sel.value]+=q;});
+  const sum=v.reduce((a,b)=>a+b,0);
+  if(sum>CAP){flash(`ผลรวมเกินความจุขบวน ${CAP} แคร่`);renderResult();return;}
+  const rows=RES.rows.slice();rows[i]=v;const t=RES.ol[i];if(RES.locks[t])RES.locks[t]=v.slice();
+  setRows(rows,`ปรับแก้สัดส่วนเอง (อิงแบบที่ ${RES.cur+1})`);
+}
+function savePlan(){
+  const R=RES;(DB.plans[R.date]=DB.plans[R.date]||{}).plan={ol:R.ol.slice(),inOpen:(R.inOpen||R.ol.map(t=>t+1)).slice(),rows:R.rows.map(r=>r.slice()),q:R.q.slice(),st:R.st,sn:R.sn,locks:R.locks};
+  R.saved=true;persist();flash('บันทึกแผนชั่วคราวแล้ว (หน้า Mockup ไม่บันทึกลงเครื่อง)');renderResult();
+}
+function renderResult(){
+  const cv=RES.vs[RES.cur];
+  Object.assign(RES,{rows:cv.rows},analyze(cv.rows,RES.ol,RES.q,RES.st,RES.sn,RES.locks));
+  RES.first=RES.st;
+  const R=RES,L=R.locks,nl=Object.keys(L).length,inO=R.inOpen||R.ol.map(t=>t+1);
+  const list=TR.map(t=>{const i=R.ol.indexOf(t),ti=t+1,inOn=inO.includes(ti);
+    let left,right;
+    if(i<0)left=`<div class="flex items-center gap-2 py-2 text-sm"><b class="w-10 tabular-nums">${t}</b><span class="font-bold text-red-600">งดเดิน</span></div>`;
+    else{const r=R.rows[i],lk=!!L[t],ed=R.edit===i;
+      left=`<div class="row flex items-start gap-1 py-2 ${lk?'bg-amber-50 border-l-2 border-l-amber-400 pl-1':''}" data-row="${i}" ${lk||ed?'':'draggable="true"'}>
+        <span class="no-print w-2 text-slate-300 text-xs ${lk?'':'cursor-grab'} select-none pt-0.5">${lk?'':'⋮'}</span>
+        <b class="w-10 text-sm tabular-nums shrink-0 pt-0.5">${t}</b>
+        <div class="flex-1 min-w-0">${ed?editorHtml(i,r):stackBadges(r)}</div>
+        <div class="no-print flex shrink-0"><button class="ib" data-a="edit" data-i="${i}" title="แก้สัดส่วนแคร่">${ic('edit')}</button><button class="ib" data-a="up" data-i="${i}" title="เลื่อนขึ้น">${ic('up')}</button><button class="ib" data-a="down" data-i="${i}" title="เลื่อนลง">${ic('down')}</button>
+          <button class="ib ${lk?'!text-amber-500':''}" data-a="lock" data-i="${i}" title="${lk?'ปลดล็อก':'ล็อกขบวนนี้'}">${ic(lk?'lock':'unlock')}</button></div></div>`;}
+    if(!inOn)right=`<div class="flex items-center gap-2 py-2 text-sm"><b class="w-10 tabular-nums">${ti}</b><span class="font-bold text-red-600">งดเดิน</span></div>`;
+    else if(i<0)right=`<div class="flex items-center gap-2 py-2 text-xs text-slate-300"><b class="w-10 tabular-nums">${ti}</b>ไม่มีสินค้าคู่ขาออก</div>`;
+    else right=`<div class="flex items-start gap-2 py-2"><b class="w-10 text-sm tabular-nums shrink-0 pt-0.5">${ti}</b>${stackBadges(R.rows[i])}</div>`;
+    return `<div class="grid grid-cols-2 gap-3 border-b border-slate-100">${left}${right}</div>`;}).join('');
+  $('result').innerHTML=`<div class="space-y-5">
+   <section class="sec">
+     <div class="lbl">แผนเปิดจอง · วัน${DAYS[wIdx(R.date)]} ${short(R.date)}</div>
+     <div class="no-print flex flex-wrap items-center gap-2 mb-3">${R.vs.map((v,i)=>`<button data-a="v" data-i="${i}" class="pill ${i===R.cur?'on':''}">แบบที่ ${i+1}</button>`).join('')}</div>
+     <div class="text-xs text-slate-400 mb-3">แบบที่ ${R.cur+1}/${R.vs.length}${R.cur===0&&R.vs.length>1?' (แนะนำ)':''} — ${cv.desc}</div>
+     <div class="no-print flex flex-wrap items-center gap-2 mb-3"><button class="btn btn-dark" data-a="saveplan">บันทึกแผนเปิดจอง</button>
+       <span id="bSaveStat" class="text-xs ${R.saved?'text-emerald-600':'text-amber-600'}">${R.saved?'✓ บันทึกแผนไว้ชั่วคราวในหน้านี้ (ไม่บันทึกลงเครื่อง)':'⚠ ยังไม่ได้กดบันทึกแผน (ไม่บังคับ ใช้ฝึกกดดูผลเฉย ๆ ได้)'}</span></div>
+     <div class="no-print flex flex-wrap gap-2 mb-3"><button class="btn" data-a="shuf">🔀 สุ่มใหม่</button><button class="btn" data-a="re">คำนวณใหม่</button><button class="btn" data-a="unl">ปลดล็อกทั้งหมด (${nl})</button>
+       <span class="flex-1"></span><button class="btn" data-a="line">${ic('copy')} คัดลอกสรุปส่ง LINE</button><button class="btn" data-a="csv">${ic('dl')} Export CSV</button><button class="btn" data-a="print">${ic('print')}</button></div>
+     <div class="grid grid-cols-2 gap-3 text-sm font-semibold border-b border-slate-200 pb-1"><div>ขาออก</div><div>ขาเข้า (คู่กับขาออก)</div></div>
+     <div id="plan">${list}</div>
+     <div class="no-print text-xs text-slate-300 mt-2">ลากแถว/▲▼ สลับตำแหน่ง · ✎ แก้สัดส่วนแคร่ในขบวน (รวมไม่เกิน ${CAP}) · ขบวนที่ล็อกเลื่อนไม่ได้</div></section>
+   ${summaryHtml(R,'สรุปโควตาและสัดส่วนรายบริษัท · ยอดเปิดจอง (ขาออก)')}
+   <section class="sec"><div class="lbl">ตรวจสอบเงื่อนไข</div>${chkHtml(R.checks)}</section></div>`;
+  updatePlanStatus();renderBookHead();
+}
+$('result').onclick=e=>{const b=e.target.closest('[data-a]');if(!b||!RES)return;const a=b.dataset.a,i=+b.dataset.i;
+  if(a==='v'){RES.cur=i;RES.edit=null;RES.saved=false;renderResult();}
+  else if(a==='up')moveRow(i,-1);else if(a==='down')moveRow(i,1);
+  else if(a==='edit'){RES.edit=RES.edit===i?null:i;renderResult();}
+  else if(a==='edone'){RES.edit=null;renderResult();}
+  else if(a==='lock'){const t=RES.ol[i];
+    if(RES.locks[t])delete RES.locks[t];
+    else{RES.locks[t]=RES.rows[i].slice();const cur=RES.rows;
+      RES.vs=RES.vs.filter(v=>RES.ol.every((tt,j)=>!RES.locks[tt]||v.rows[j].join()===RES.locks[tt].join()));
+      RES.cur=Math.max(0,RES.vs.findIndex(v=>v.rows===cur));}
+    RES.saved=false;renderResult();}
+  else if(a==='shuf'){RES.edit=null;RES.saved=false;if(RES.vs.length>1){let j;do{j=Math.floor(Math.random()*RES.vs.length)}while(j===RES.cur);RES.cur=j;renderResult();}else recompute(true);}
+  else if(a==='re'){RES.edit=null;recompute(false);}
+  else if(a==='unl'){RES.locks={};RES.saved=false;renderResult();}
+  else if(a==='saveplan')savePlan();
+  else if(a==='line')copy(bookLine(),'คัดลอกสรุปยอดจองแล้ว');
+  else if(a==='csv')downloadCsv(bookCsv(),'booking-plan-'+RES.date+'.csv');else if(a==='print')window.print();};
+$('result').onchange=e=>{const ed=e.target.closest&&e.target.closest('[data-ed]');if(ed&&RES)applyEdit(+ed.dataset.ed,ed);};
+$('result').ondragstart=e=>{const r=e.target.closest&&e.target.closest('[data-row]');if(r){DRAG=+r.dataset.row;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',String(DRAG))}catch(x){}}};
+$('result').ondragover=e=>{if(DRAG!==null&&e.target.closest('[data-row]'))e.preventDefault();};
+$('result').ondrop=e=>{const r=e.target.closest('[data-row]');if(r&&DRAG!==null){e.preventDefault();const f=DRAG;DRAG=null;swapRows(f,+r.dataset.row);}};
+$('result').ondragend=()=>{DRAG=null;};
+
+/* ----- Export helpers ----- */
+const compText=r=>r.map((x,c)=>x?`${CO[c]} ${x}`:'').filter(Boolean).join(' + ');
+const sumLines=R=>companySummary(R).map(x=>`${x.name} ${x.q} แคร่ (${x.pct}%) · ${x.n} ขบวน`).join('\n');
+function bookLine(){
+  const inO=RES.inOpen||RES.ol.map(t=>t+1);
+  let s=`🚆 แผนเปิดจองโควตา ${fmt(RES.date)}\nขาออก\n`;
+  TR.forEach(t=>{const i=RES.ol.indexOf(t);s+=i<0?`${t}: ไม่เปิดจอง\n`:`${t}: ${compText(RES.rows[i])}\n`;});
+  s+='ขาเข้า\n';
+  TR.forEach(t=>{const i=RES.ol.indexOf(t);s+=!inO.includes(t+1)?`${t+1}: งดเดิน\n`:i<0?`${t+1}: -\n`:`${t+1}: ${compText(RES.rows[i])}\n`;});
+  return s+`\nสรุปสัดส่วน (${RES.ol.length} ขบวน = ${RES.ol.length*CAP} แคร่)\n`+sumLines(RES);
+}
+function bookCsv(){
+  const inO=RES.inOpen||RES.ol.map(t=>t+1);
+  const L=['วันที่,ขบวน,ทิศทาง,สถานะ,ประเภท,'+CO.join(',')+',รวม'];
+  TR.forEach(t=>{const i=RES.ol.indexOf(t);
+    if(i<0)L.push(`${RES.date},${t},ขาออก,ไม่เปิดจอง,-,0,0,0,0,0`);else{const r=RES.rows[i];L.push(`${RES.date},${t},ขาออก,เปิดจอง,${nz(r)>1?'ผสม':'เดี่ยว'},${r.join(',')},${CAP}`);}
+    if(!inO.includes(t+1))L.push(`${RES.date},${t+1},ขาเข้า,งดเดิน,-,0,0,0,0,0`);else if(i<0)L.push(`${RES.date},${t+1},ขาเข้า,ไม่มีสินค้า,-,0,0,0,0,0`);else{const r=RES.rows[i];L.push(`${RES.date},${t+1},ขาเข้า,เปิดจอง,${nz(r)>1?'ผสม':'เดี่ยว'},${r.join(',')},${CAP}`);}});
+  L.push('');L.push('บริษัท,โควตา(แคร่),ขบวน,สัดส่วน(%),เลขขบวน,Max Gap');
+  companySummary(RES).forEach(x=>L.push([x.name,x.q,x.n,x.pct,'"'+x.trains+'"',x.mg].join(',')));
+  return L.join('\n');
+}
+function downloadCsv(text,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+text],{type:'text/csv;charset=utf-8'}));
+  a.download=name;document.body.appendChild(a);a.click();a.remove();
+}
+function copy(t,m){
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{
+    const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();
+    try{document.execCommand('copy')}catch(e){}a.remove();}).then(()=>flash(m));
+}
+
+const pairsOf=r=>r?r.map((x,c)=>x>0?[c,x]:null).filter(Boolean):[];
+/* ----- ปุ่ม "เปิดเดินทั้งหมด" / "งดเดินทั้งหมด" ----- */
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-all]');if(!b||!S.tdate)return;const on=b.dataset.all==='on';
+  TR.forEach(t=>{S.open[t]=on;});INB.forEach(t=>{S.inOpen[t]=on;});
+  rescale();save();clearRes();renderTrains();syncQuota();flash(on?'เปิดเดินทั้งหมดแล้ว':'งดเดินทั้งหมดแล้ว');
+});
+/* ----- รีเซ็ตค่าตัวอย่าง ----- */
+$('resetDemo').onclick=()=>{initState();applyColors();loadEditor(S.tdate);renderBook();flash('รีเซ็ตเป็นค่าตัวอย่างเริ่มต้นแล้ว');};
+/* ----- Boot ----- */
+initState();loadEditor(S.tdate);applyColors();renderBook();
+</script>
+</body>
+</html>
