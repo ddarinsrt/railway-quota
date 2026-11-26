@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup - ระบบจัดแบ่งโควตาการขนส่งทางรถไฟ (สำหรับฝึกงาน)</title>
+  <script src="https://tailwindcss.com"></script>
+  <link href="https://googleapis.com" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background-color: #F8FAFC; color: #0F172A; }
+    input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
+  </style>
+</head>
+<body class="p-3 md:p-6 max-w-6xl mx-auto">
+
+  <!-- Header -->
+  <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 mb-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300 rounded-full">
+          โหมดตัวอย่าง (Mockup สำหรับฝึกงาน)
+        </span>
+        <span class="text-xs text-slate-400">35 บทต./ขบวน</span>
+      </div>
+      <h1 class="text-xl font-bold text-slate-800 mt-1">ระบบจัดแบ่งโควตาการขนส่งทางรถไฟ (หน้าแผนเปิดจองโควตา)</h1>
+      <p class="text-xs text-slate-500">ทดลองกรอกจำนวนขบวน ปรับโควตา กดล็อกขบวน หรือเลื่อนสลับคิวได้อิสระโดยไม่กระทบข้อมูลจริง</p>
+    </div>
+    <button onclick="resetDemo()" class="self-start sm:self-center px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition">
+      รีเซ็ตค่าตัวอย่างเริ่มต้น
+    </button>
+  </header>
+
+  <!-- Step 1: Date, Train Count & Quotas -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-4">
+    
+    <!-- Left Box: Date & Quotas -->
+    <div class="lg:col-span-7 bg-white p-4 rounded-xl border border-slate-200 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">วันที่ทำการจอง</label>
+          <input type="date" id="bookingDate" value="2026-11-26" onchange="updateDateDisplay()" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-slate-500">
+          <div id="thaiDateLabel" class="text-xs font-semibold text-blue-600 mt-1">เปิดจองของ: ศุกร์ที่ 27 พ.ย. 69</div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">จำนวนขบวนที่เปิดจอง (เที่ยวเดียว)</label>
+          <input type="number" id="openTrainCount" value="10" min="1" max="15" oninput="handleTrainCountChange()" class="w-full px-3 py-1.5 text-sm font-bold border border-slate-300 rounded-lg focus:outline-none focus:border-slate-500">
+          <div id="roundTripLabel" class="text-xs text-slate-500 mt-1">รวม 20 ขบวนไป-กลับ (350 บทต.)</div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ลำดับขบวนแรก</label>
+          <select id="firstCompany" onchange="generatePlans()" class="w-full px-3 py-1.5 text-sm font-semibold border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-slate-500">
+            <option value="SSS">SSS (วน: SSS → ESCO → ECTT → NICD)</option>
+            <option value="ESCO">ESCO (วน: ESCO → ECTT → NICD → SSS)</option>
+            <option value="ECTT">ECTT (วน: ECTT → NICD → SSS → ESCO)</option>
+            <option value="NICD">NICD (วน: NICD → SSS → ESCO → ECTT)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-100 pt-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-700">โควตาเปิดจองแต่ละบริษัท (บทต.)</span>
+          <span id="quotaValidation" class="text-xs font-semibold text-emerald-600">รวม 350 / 350 บทต. (ครบพอดี)</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="p-2.5 rounded-lg border border-slate-200 bg-slate-50/50">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <input type="color" id="color-SSS" value="#2563EB" onchange="updateColors()" class="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent"> SSS
+              </span>
+              <span class="text-[11px] text-slate-400">คิว 1</span>
+            </div>
+            <input type="number" id="quota-SSS" value="125" min="0" oninput="handleManualQuota()" class="w-full px-2 py-1 text-sm font-bold bg-white border border-slate-300 rounded">
+          </div>
+
+          <div class="p-2.5 rounded-lg border border-slate-200 bg-slate-50/50">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <input type="color" id="color-ESCO" value="#059669" onchange="updateColors()" class="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent"> ESCO
+              </span>
+              <span class="text-[11px] text-slate-400">คิว 2</span>
+            </div>
+            <input type="number" id="quota-ESCO" value="85" min="0" oninput="handleManualQuota()" class="w-full px-2 py-1 text-sm font-bold bg-white border border-slate-300 rounded">
+          </div>
+
+          <div class="p-2.5 rounded-lg border border-slate-200 bg-slate-50/50">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <input type="color" id="color-ECTT" value="#D97706" onchange="updateColors()" class="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent"> ECTT
+              </span>
+              <span class="text-[11px] text-slate-400">คิว 3</span>
+            </div>
+            <input type="number" id="quota-ECTT" value="80" min="0" oninput="handleManualQuota()" class="w-full px-2 py-1 text-sm font-bold bg-white border border-slate-300 rounded">
+          </div>
+
+          <div class="p-2.5 rounded-lg border border-slate-200 bg-slate-50/50">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <input type="color" id="color-NICD" value="#7C3AED" onchange="updateColors()" class="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent"> NICD
+              </span>
+              <span class="text-[11px] text-slate-400">คิว 4</span>
+            </div>
+            <input type="number" id="quota-NICD" value="60" min="0" oninput="handleManualQuota()" class="w-full px-2 py-1 text-sm font-bold bg-white border border-slate-300 rounded">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Box: LINE Message Preview -->
+    <div class="lg:col-span-5 bg-white p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-700">ข้อความแจ้งลูกค้าส่งใน LINE</span>
+          <button onclick="copyLineText()" id="copyBtn" class="px-2.5 py-1 text-xs font-semibold bg-slate-800 text-white hover:bg-slate-700 rounded-lg transition">
+            คัดลอกข้อความ
+          </button>
+        </div>
+        <pre id="linePreview" class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-mono leading-relaxed whitespace-pre-wrap"></pre>
+      </div>
+      <div class="mt-2 text-[11px] text-slate-400">
+        * ตัวเลขในข้อความจะอัปเดตอัตโนมัติตามจำนวนขบวนและโควตาที่กรอกทางซ้ายมือ
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Train Toggle Selector -->
+  <div class="bg-white p-4 rounded-xl border border-slate-200 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <div>
+        <h2 class="text-sm font-bold text-slate-800">เลือกขบวนที่เปิดจอง (15 คู่ขบวน)</h2>
+        <p class="text-xs text-slate-500">กดที่เลขขบวนเพื่อเปิด/งดเดิน (ปกติงดขาออกจะงดขาเข้าที่คู่กันอัตโนมัติ)</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="setAllTrains(true)" class="px-3 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg">
+          เปิดเดินทั้งหมด
+        </button>
+        <button onclick="setAllTrains(false)" class="px-3 py-1 text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 rounded-lg">
+          งดเดินทั้งหมด
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <!-- Outbound Toggles -->
+      <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+        <div class="text-xs font-semibold text-slate-600 mb-2">ขาออก (4431 - 4459) : เปิด <span id="outCountBadge" class="text-blue-600 font-bold">10</span> ขบวน</div>
+        <div id="outboundToggles" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <!-- Inbound Toggles -->
+      <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+        <div class="text-xs font-semibold text-slate-600 mb-2">ขาเข้า (4432 - 4460) : เปิด <span id="inCountBadge" class="text-blue-600 font-bold">10</span> ขบวน</div>
+        <div id="inboundToggles" class="flex flex-wrap gap-1.5"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Schedule Table (Split Left-Right) -->
+  <div class="bg-white p-4 rounded-xl border border-slate-200">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <div class="flex flex-wrap items-center gap-1.5" id="variantTabs">
+        <!-- Variant buttons injected here -->
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="unlockAll()" class="px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200">
+          ปลดล็อกทั้งหมด
+        </button>
