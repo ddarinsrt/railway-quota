@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>บริหารจัดการโควตาและบันทึกการจองแคร่รถไฟประจำวัน</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -50,25 +51,32 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
     <div id="bEditor" class="space-y-5">
       <section class="sec no-print lim">
         <div class="flex justify-between items-baseline"><div class="lbl">ขบวนที่เปิดจอง (คู่ขาออก ⇄ ขาเข้า)</div><div id="capinfo" class="text-sm text-slate-500"></div></div>
+        <div class="grid sm:grid-cols-[auto_1fr] gap-4 items-end mb-4">
+          <label class="text-sm text-slate-600">จำนวนขบวนที่เปิดจอง (ขาออก = ขาเข้า)<input id="nOpen" type="number" min="0" max="15" class="inp mt-1" style="width:120px;text-align:center"></label>
+          <div class="text-xs text-slate-400">เช่น กรอก 10 = เปิดจอง 10 ขบวนขาออก + 10 ขบวนขาเข้า (รวม 20 ขบวนไป-กลับ) โควตาแต่ละบริษัทคำนวณอัตโนมัติ (Largest Remainder)</div>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4"><div class="text-xs text-slate-500 mb-2">ข้อความแจ้งลูกค้า (ส่ง LINE)</div>
+          <pre id="lineTxt" class="text-sm whitespace-pre-wrap" style="font-family:inherit"></pre>
+          <button class="btn mt-2" id="lineCopy">คัดลอกข้อความส่ง LINE</button></div>
         <div id="trains"></div>
-        <div class="flex flex-wrap gap-2 mt-3"><button class="btn" data-all="both" data-ctx="book">เปิดเดินทั้งหมด</button><button class="btn" data-all="out" data-ctx="book">เปิดทั้งหมดขาออก</button><button class="btn" data-all="in" data-ctx="book">เปิดทั้งหมดขาเข้า</button></div>
+        <div class="flex flex-wrap gap-2 mt-3"><button class="btn" data-all="on" data-ctx="book">เปิดเดินทั้งหมด</button><button class="btn" data-all="off" data-ctx="book">งดเดินทั้งหมด</button></div>
         <div class="text-xs text-slate-400 mt-3">กดงดขบวนขาออก = งดขบวนขาเข้าที่คู่กันอัตโนมัติ · กดที่ขบวนขาเข้าโดยตรงเพื่อแก้ข้อยกเว้นเฉพาะขาเข้า</div>
       </section>
       <section class="sec no-print lim">
-        <div class="flex justify-between items-baseline"><div class="lbl">โควตาเปิดจองและสีประจำบริษัท</div><div id="qnote" class="text-xs text-slate-400"></div></div>
+        <div class="flex justify-between items-baseline"><div class="lbl">โควตาเปิดจอง</div><div id="qnote" class="text-xs text-slate-400"></div></div>
         <div id="baseinfo" class="text-xs text-slate-400 mb-4"></div>
         <div id="quota" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
         <div id="rnote" class="mt-3 text-xs text-slate-400"></div>
         <div id="valid" class="mt-2 text-sm"></div>
       </section>
       <section class="sec no-print lim">
-        <div class="lbl">ลำดับเริ่มต้น</div>
+        <div class="lbl">ลำดับขบวนแรก</div>
         <div class="grid sm:grid-cols-2 gap-4 text-sm text-slate-500">
           <label>บริษัทแรกของวันนี้<select id="st" class="inp mt-1"></select></label>
           <label>บริษัทแรกของวันถัดไป<select id="sn" class="inp mt-1"></select></label>
         </div>
         <div id="stnote" class="text-xs text-slate-400 mt-3"></div>
-        <div class="flex flex-wrap items-center gap-2 mt-5"><button id="go" class="btn btn-dark">จัดตารางเปิดจอง</button><button id="sample" class="btn"></button><span id="pstat" class="text-xs text-slate-400 ml-1"></span></div>
+        <div class="flex flex-wrap items-center gap-2 mt-5"><button id="go" class="btn btn-dark">จัดตารางเปิดจอง</button><span id="pstat" class="text-xs text-slate-400 ml-1"></span></div>
       </section>
       <div id="result"></div>
     </div>
@@ -82,8 +90,11 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
     </section>
     <section class="sec no-print lim">
       <div class="flex justify-between items-baseline"><div class="lbl">ขบวนที่เปิดเดินจริง (คู่ขาออก ⇄ ขาเข้า)</div><button id="areset" class="text-xs text-slate-400 underline">คืนค่าเริ่มต้น</button></div>
+      <label class="text-sm text-slate-600 block mb-4">จำนวนขบวนที่เปิดเดินจริง (ขาออก = ขาเข้า)<input id="nOpenA" type="number" min="0" max="15" class="inp mt-1" style="width:120px;text-align:center"></label>
       <div id="atrains"></div>
-      <div class="flex flex-wrap gap-2 mt-3"><button class="btn" data-all="both" data-ctx="act">เปิดเดินทั้งหมด</button><button class="btn" data-all="out" data-ctx="act">เปิดทั้งหมดขาออก</button><button class="btn" data-all="in" data-ctx="act">เปิดทั้งหมดขาเข้า</button></div>
+      <div class="flex flex-wrap gap-2 mt-3"><button class="btn" data-all="on" data-ctx="act">เปิดเดินทั้งหมด</button><button class="btn" data-all="off" data-ctx="act">งดเดินทั้งหมด</button></div>
+      <div class="flex flex-wrap items-center gap-2 mt-5"><button class="btn btn-dark" id="aSavePlan">บันทึกแผนเดินรถจริง</button><button class="btn" id="aSendGs">บันทึกลง Google Sheets</button><button class="btn" id="aViewWs">ดูใบงานรถไฟ</button></div>
+      <div id="aStat" class="text-xs mt-3"></div>
     </section>
     <div id="aresult"></div>
   </div>
@@ -104,6 +115,9 @@ body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:#F8F
     </section>
     <div id="formFit" style="overflow:hidden;width:100%"><div id="formArea" class="sec" style="width:1100px;padding:0;border:0"></div></div>
   </div>
+  <div id="wsModal" class="hidden fixed inset-0 z-50 overflow-auto p-3" style="background:rgba(0,0,0,.6)"><div class="bg-white rounded-xl mx-auto p-3" style="max-width:1180px">
+    <div class="flex flex-wrap items-center gap-2 mb-3"><button class="btn btn-dark" id="wsSave">บันทึกรูปภาพ (.PNG)</button><button class="btn" id="wsClose">ปิด</button><span id="wsTitle" class="text-sm text-slate-600"></span></div>
+    <div id="wsFit" style="overflow:hidden;width:100%"><div id="wsPaper"></div></div></div></div>
   <div id="toast" class="no-print fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-slate-900 text-white px-4 py-2 text-sm hidden"></div>
 </div>
 <script>
@@ -191,7 +205,7 @@ function periodFor(d){
 const baseFor=d=>periodFor(d).week[wIdx(d)];
 const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let RES=null,DRAG=null,ACT=null;
-const persist=()=>{try{localStorage.setItem('rfqs_v2',JSON.stringify(S));localStorage.setItem('rfqs_db',JSON.stringify(DB));}catch(e){}};
+const persist=(noStamp)=>{if(!noStamp)S.localAt=Date.now();try{localStorage.setItem('rfqs_v2',JSON.stringify(S));localStorage.setItem('rfqs_db',JSON.stringify(DB));}catch(e){}};
 function save(){if(S.tdate)(DB.plans[S.tdate]=DB.plans[S.tdate]||{}).inp={open:Object.assign({},S.open),q:S.q.slice(),edited:S.edited,st:S.st,sn:S.sn,stAuto:S.stAuto,inOpen:Object.assign({},S.inOpen)};persist();}
 const openList=()=>TR.filter(t=>S.open[t]);
 const sums=()=>S.q.reduce((a,b)=>a+b,0);
@@ -241,13 +255,14 @@ const V=[],IDX=new Map();
   const sp=v=>{const x=v.filter(y=>y>0);return Math.max(...x)-Math.min(...x)};
   V.sort((p,q)=>nz(p)-nz(q)||sp(p)-sp(q));V.forEach((v,i)=>IDX.set(v.join(),i));})();
 
-function groupings(r,m){
+function groupings(r,m,only2){
   const out=[];let nodes=0;
   if(m===0)return r.every(x=>x===0)?[[[],0]]:[];
   (function rec(rem,left,prev,acc){
     if(nodes>3e6||out.length>20000)return;
-    if(left===1){const i=IDX.get(rem.join());if(i!==undefined&&i>=prev)out.push(acc.concat([rem]));return;}
+    if(left===1){const i=IDX.get(rem.join());if(i!==undefined&&i>=prev&&(!only2||nz(V[i])===2))out.push(acc.concat([rem]));return;}
     for(let i=prev;i<V.length;i++){nodes++;const v=V[i];
+      if(only2&&nz(v)!==2)continue;
       if(v[0]<=rem[0]&&v[1]<=rem[1]&&v[2]<=rem[2]&&v[3]<=rem[3])rec(rem.map((x,j)=>x-v[j]),left-1,i,acc.concat([v]));
       if(nodes>3e6)return;}
   })(r,m,0,[]);
@@ -257,8 +272,13 @@ function groupings(r,m){
 
 function sequence(types,cnt,n,cfg,cyc,tom,present,cap,K,fixed,strict){
   const k=cyc.length,last=[-1,-1,-1,-1],order=[],sols=[];let thr=Infinity,nodes=0;
-  const chk=(R,t,prev)=>{let v=0;
-    if(prev&&R.some((x,c)=>x>0&&prev[c]>0&&x+prev[c]>CAP)){if(cfg.adj)return -1;v++;}
+  const chk=(R,t)=>{let v=0;
+    // ติดกันได้ 2-3 ขบวน: 2 ขบวน = ขบวนใดขบวนหนึ่งของบริษัทนั้น ≤15 แคร่ | 3 ขบวน = ขบวนตรงกลาง ≤10 แคร่ | 4 ขบวนขึ้นไปห้าม
+    if(t>=1){const p1=order[t-1],p2=t>=2?order[t-2]:null,p3=t>=3?order[t-3]:null;
+      for(let c=0;c<4;c++){if(R[c]>0&&p1[c]>0){
+        const run=p2&&p2[c]>0?(p3&&p3[c]>0?4:3):2;
+        const ok=run===2?Math.min(R[c],p1[c])<=15:run===3?p1[c]<=10:false;
+        if(!ok){if(cfg.adj)return -1;v++;break;}}}}
     if(t<k){const c=cyc[t];if(strict[c]?R[c]!==CAP:!(R[c]>0)){if(cfg.f4)return -1;v++;}}
     if(t===n-1&&tom>=0&&R[tom]>0){if(cfg.bd)return -1;v++;}
     return v;};
@@ -288,9 +308,9 @@ function pickVariants(all){
   const L=all.filter(a=>Math.floor(a.score/1e6)===mv).sort((a,b)=>a.tot-b.tot);
   const by=new Map();L.forEach(a=>{if(!by.has(a.key))by.set(a.key,[]);by.get(a.key).push(a)});
   const lists=[...by.values()],out=[],seen=new Set();
-  for(let d=0;out.length<10;d++){let add=false;
+  for(let d=0;out.length<5;d++){let add=false;
     for(const l of lists){const a=l[d];if(!a)continue;add=true;
-      const sg=a.rows.map(r=>r.join()).join('|');if(seen.has(sg))continue;seen.add(sg);out.push(a);if(out.length>=10)break;}
+      const sg=a.rows.map(r=>r.join()).join('|');if(seen.has(sg))continue;seen.add(sg);out.push(a);if(out.length>=5)break;}
     if(!add)break;}
   const mgs=out.map(a=>Math.floor((a.score%1e6)/1e4)),minMg=Math.min(...mgs);
   out.forEach((a,i)=>{
@@ -312,29 +332,32 @@ function solve(n,q,st,sn,fixed){
   breaks.push(p0.map((p,c)=>p>0?[c]:null).filter(Boolean));
   const b2=[];for(let a=0;a<4;a++)for(let b=a;b<4;b++){const pp=p0.slice();pp[a]--;pp[b]--;if(pp[a]>=0&&pp[b]>=0)b2.push([a,b]);}
   breaks.push(b2);
-  const levels=[{adj:1,f4:1,bd:1},{adj:1,f4:1,bd:0},{adj:1,f4:0,bd:0},{adj:0,f4:0,bd:0}];
+  const levels=[{adj:1,f4:1,bd:1,mix:1},{adj:1,f4:1,bd:0,mix:1},{adj:1,f4:0,bd:0,mix:1},{adj:0,f4:0,bd:0,mix:1},{adj:0,f4:0,bd:0,mix:0}];
+  const R0=Math.round(r0.reduce((a,x)=>a+x,0)/CAP);
   for(let li=0;li<levels.length;li++){
-    const cfg=levels[li],fin=li===levels.length-1;
-    for(let b=0;b<=2;b++){
+    const cfg=levels[li],fin=li===levels.length-1,pool=[];
+    // กฎขบวนผสม (mix=1): ไม่เกิน 3 ขบวน และถ้าเป็น 3 ขบวนแต่ละขบวนผสมไม่เกิน 2 บริษัท | แยกขบวนเต็ม 1 ขบวนเพิ่มได้ถ้าช่วยให้การกระจายดีขึ้น
+    const bMax=cfg.mix?Math.max(0,Math.min(1,3-R0)):0;
+    for(let b=0;b<=bMax;b++){
       if(!fin&&Date.now()>dl)break;
-      if(fin&&b>0)break;
-      const all=[];
       for(const br of breaks[b]){
         const p=p0.slice(),r=r0.slice();br.forEach(c=>{p[c]--;r[c]+=CAP;});
         const m=r.reduce((a,x)=>a+x,0)/CAP;if(!Number.isInteger(m)||m>5)continue;
-        const gs=groupings(r,m),K=Math.max(2,Math.min(10,Math.ceil(12/Math.max(1,gs.length))));
+        if(cfg.mix&&m>3)continue;
+        const gs=groupings(r,m,cfg.mix&&m>=3),K=Math.max(2,Math.min(5,Math.ceil(10/Math.max(1,gs.length))));
         for(const [g,gc] of gs){
           if(!fin&&Date.now()>dl)break;
           const types=[],cnt=[];
           p.forEach((x,c)=>{if(x>0){const v=[0,0,0,0];v[c]=CAP;types.push(v);cnt.push(x);}});
           g.forEach(v=>{const i=types.findIndex(t=>t.join()===v.join());if(i>=0)cnt[i]++;else{types.push(v);cnt.push(1);}});
-          const key=g.map(v=>v.join()).sort().join('|');
+          const key=g.map(v=>v.join()).sort().join('|'),three=Math.floor(gc/1e3),spread=gc%1e3;
           for(const sq of sequence(types,cnt,n,cfg,cyc,sn,present,fin?200000:30000,K,fixed,strict))
-            all.push({rows:sq.order,score:sq.score,tot:sq.score+gc*100,key});
+            // เรียงตามความสม่ำเสมอของการกระจายรอบก่อน (Max Gap, ผลรวมกำลังสอง) แล้วค่อยดูจำนวนขบวนผสม/บริษัทที่ผสม
+            pool.push({rows:sq.order,score:sq.score,tot:sq.score+three*0.05+g.length*0.02+spread*0.0003,key});
         }
       }
-      if(all.length)return pickVariants(all);
     }
+    if(pool.length)return pickVariants(pool);
   }
   return null;
 }
@@ -346,7 +369,10 @@ function analyze(rows,ol,q,st,sn,locks){
   const f4=cyc.every((c,i)=>i>=n||(q[c]>=CAP?rows[i][c]===CAP:rows[i][c]>0));
   const exc=cyc.filter(c=>q[c]<CAP).map(c=>CO[c]),short4=n<4;
   const mixed=rows.filter(r=>nz(r)>1).length,three=rows.filter(r=>nz(r)>2).length;
-  const bad=[];for(let i=1;i<n;i++)if(rows[i].some((x,c)=>x>0&&rows[i-1][c]>0&&x+rows[i-1][c]>CAP))bad.push(ol[i-1]+'-'+ol[i]);
+  const bad=[];for(let i=1;i<n;i++){let b1=false;for(let c=0;c<4;c++){if(rows[i][c]>0&&rows[i-1][c]>0){
+    const p2=i>=2?rows[i-2]:null,p3=i>=3?rows[i-3]:null,run=p2&&p2[c]>0?(p3&&p3[c]>0?4:3):2;
+    const ok=run===2?Math.min(rows[i][c],rows[i-1][c])<=15:run===3?rows[i-1][c]<=10:false;if(!ok)b1=true;}}
+    if(b1)bad.push(ol[i-1]+'-'+ol[i]);}
   const bd=!(rows[n-1][sn]>0);
   const okq=rows.every(r=>r.reduce((a,b)=>a+b,0)===CAP)&&CO.every((_,c)=>rows.reduce((a,r)=>a+r[c],0)===q[c]);
   let worst=0,ideal=0;
@@ -357,9 +383,9 @@ function analyze(rows,ol,q,st,sn,locks){
     return {c,idx,mg};});
   return {gaps,checks:[
     {ok:f4&&!exc.length&&!short4,t:'4 ขบวนแรกเป็นขบวนเดี่ยวเรียงตามคิว',d:(f4?`เริ่ม ${CO[st]} เรียง ${cyc.map(c=>CO[c]).join(' → ')} เป็นขบวนเดี่ยว 35 แคร่`:'4 ขบวนแรกไม่เป็นขบวนเดี่ยวตามลำดับคิว')+(exc.length?` · ข้อยกเว้น: ${exc.join(', ')} โควตาไม่ถึง 35 แคร่`:'')+(short4?' · เปิดเดินไม่ถึง 4 ขบวน':'')},
-    {ok:mixed<=2&&rows.every(r=>nz(r)<=3),t:'ขบวนผสมน้อยที่สุด',d:`ผสม ${mixed} ขบวน (3 บริษัท ${three}) · ขั้นต่ำตามโควตา ${R0}`},
+    {ok:(mixed<=2&&rows.every(r=>nz(r)<=3))||(mixed===3&&rows.filter(r=>nz(r)>1).every(r=>nz(r)<=2)),t:'ขบวนผสมน้อยที่สุด',d:`ผสม ${mixed} ขบวน (ผสม 3 บริษัท ${three} ขบวน) · ขั้นต่ำตามโควตา ${R0} · กติกา: ไม่เกิน 2 ขบวน หรือ 3 ขบวนโดยแต่ละขบวนผสมไม่เกิน 2 บริษัท`},
     {ok:worst-ideal<=1,t:'กระจายรอบสม่ำเสมอ',d:`ทิ้งช่วงสูงสุด ${worst} ขบวน (ดีที่สุดโดยประมาณ ${ideal})`},
-    {ok:!bad.length,t:'ห้ามติดกัน',d:bad.length?'ซ้ำติดกันเกิน 35 แคร่: '+bad.join(', '):'ไม่มีบริษัทซ้ำติดกัน (หรือรวมไม่เกิน 35)'},
+    {ok:!bad.length,t:'กฎการขึ้นติดกัน',d:bad.length?'ติดกันเกินเงื่อนไข (2 ขบวน: ขบวนใดขบวนหนึ่ง ≤15 แคร่ · 3 ขบวน: ขบวนกลาง ≤10 แคร่): '+bad.join(', '):'ไม่มีบริษัทซ้ำติดกัน หรือติดกันตามเงื่อนไข (2 ขบวนมี ≤15 แคร่ / 3 ขบวนกลาง ≤10 แคร่)'},
     {ok:bd,t:'รอยต่อวันถัดไป',d:bd?`ขบวนสุดท้ายไม่มี ${CO[sn]}`:`ขบวนสุดท้ายมี ${CO[sn]}`},
     {ok:okq,t:'โควตาและการล็อก',d:okq?`ตรงโควตาครบ${nl?` · ล็อก ${nl} ขบวน`:''}`:'ยอดไม่ตรงโควตา'}]};
 }
@@ -427,15 +453,27 @@ function renderBook(){
   if(!S.tdate){RES=null;$('result').innerHTML='';return;}
   buildInputs();renderTrains();updateQnote();
   const p=planOf(S.tdate);
-  if(p){RES={vs:[{rows:p.rows.map(r=>r.slice()),desc:'แผนที่บันทึกไว้'}],cur:0,ol:p.ol.slice(),inOpen:(p.inOpen||p.ol.map(t=>t+1)).slice(),q:p.q.slice(),st:p.st,sn:p.sn,locks:p.locks||{},date:S.tdate,edit:null};renderResult();}
+  if(p){RES={vs:[{rows:p.rows.map(r=>r.slice()),desc:'แผนที่บันทึกไว้'}],cur:0,ol:p.ol.slice(),inOpen:(p.inOpen||p.ol.map(t=>t+1)).slice(),q:p.q.slice(),st:p.st,sn:p.sn,locks:p.locks||{},date:S.tdate,edit:null,saved:true};renderResult();}
   else{RES=null;$('result').innerHTML='';}
   updatePlanStatus();
+}
+function renderLineBox(){
+  if(!S.tdate||!$('lineTxt'))return;
+  const n=openList().length,m=INB.filter(t=>S.inOpen[t]!==false).length,d=parseD(S.tdate);
+  const dt=`${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()+543}`;
+  $('lineTxt').textContent=`วัน${DAYS[wIdx(S.tdate)]}ที่ ${dt} เปิดจองในโควตา ${n} ขบวน\n(${n+m} ขบวนไป-กลับ)\nSSS   = ${S.q[0]} บทต.\nESCO = ${S.q[1]} บทต.\nECTT = ${S.q[2]} บทต.\nNICD = ${S.q[3]} บทต.`;
+}
+function setOpenCount(N){
+  N=Math.max(0,Math.min(15,parseInt(N)||0));
+  TR.forEach((t,i)=>{S.open[t]=i<N;S.inOpen[t+1]=i<N;});    // เปิดจอง N ขบวนขาออก + N ขบวนขาเข้า (เรียงจากขบวนแรก)
+  rescale();save();clearRes();renderTrains();syncQuota();
 }
 function renderTrains(){
   $('trains').innerHTML=pairPills(t=>S.open[t]!==false,t=>S.inOpen[t]!==false,'data-t','data-ti');
   const n=openList().length,m=INB.filter(t=>S.inOpen[t]!==false).length;
   $('capinfo').innerHTML=`ขาออก <b>${n}</b> ขบวน (<b>${n*CAP}</b> แคร่) · ขาเข้า <b>${m}</b> ขบวน`;
-  renderValid();renderBase();
+  if($('nOpen'))$('nOpen').value=n;
+  renderValid();renderBase();renderLineBox();
 }
 function renderBase(){
   if(!S.tdate)return;
@@ -452,7 +490,7 @@ function buildInputs(){
   $('quota').innerHTML=CO.map((c,i)=>`<div><div class="flex items-center gap-2 mb-1.5"><input type="color" data-c="${i}" value="${S.colors[i]}" class="swatch" title="เปลี่ยนสี ${c}"><span class="text-sm font-medium">${c}</span></div>
     <input data-q="${i}" type="number" min="0" inputmode="numeric" value="${S.q[i]}" class="inp"></div>`).join('');
   $('st').innerHTML=$('sn').innerHTML=CO.map((c,i)=>`<option value="${i}">${c}</option>`).join('');
-  $('st').value=S.st;$('sn').value=S.sn;$('sample').innerHTML=ic('dice')+' สุ่มข้อมูลทดสอบ';updateStNote();
+  $('st').value=S.st;$('sn').value=S.sn;updateStNote();
 }
 const rescale=()=>{if(!S.tdate)return;S.q=scale(baseFor(S.tdate),openList().length*CAP).q;S.edited=false;};
 function updateQnote(){
@@ -461,7 +499,7 @@ function updateQnote(){
   const r=scale(baseFor(S.tdate),openList().length*CAP);
   $('rnote').textContent=(r.raw.some(x=>x)?'ค่าดิบ '+CO.map((c,i)=>`${c} ${r.raw[i].toFixed(3)}`).join(' · ')+' → ':'')+roundNote(r);
 }
-function syncQuota(){document.querySelectorAll('[data-q]').forEach(el=>el.value=S.q[el.dataset.q]);updateQnote();renderValid();}
+function syncQuota(){document.querySelectorAll('[data-q]').forEach(el=>el.value=S.q[el.dataset.q]);updateQnote();renderValid();renderLineBox();}
 
 $('tabs').onclick=e=>{const b=e.target.closest('[data-tab]');if(b)setTab(b.dataset.tab);};
 function setTab(t){
@@ -481,20 +519,14 @@ $('trains').onclick=e=>{const b=e.target.closest('button');if(!b)return;
   save();clearRes();renderTrains();syncQuota();};
 $('quota').oninput=e=>{const d=e.target.dataset;
   if(d.c!==undefined){S.colors[d.c]=e.target.value;applyColors();persist();return;}
-  if(d.q!==undefined){S.q[d.q]=Math.max(0,parseInt(e.target.value)||0);S.edited=true;save();clearRes();renderValid();updateQnote();}};
+  if(d.q!==undefined){S.q[d.q]=Math.max(0,parseInt(e.target.value)||0);S.edited=true;save();clearRes();renderValid();updateQnote();renderLineBox();}};
 $('qnote').onclick=e=>{if(e.target.id==='qreset'){rescale();save();clearRes();syncQuota();}};
 $('st').onchange=e=>{S.st=+e.target.value;S.sn=(S.st+1)%4;S.stAuto=false;$('sn').value=S.sn;save();clearRes();updateStNote();};
 $('sn').onchange=e=>{S.sn=+e.target.value;S.stAuto=false;save();clearRes();updateStNote();};
 $('stnote').onclick=e=>{if(e.target.id==='streset'){S.stAuto=true;const a=autoStart(S.tdate);S.st=a.st;S.sn=a.sn;save();clearRes();buildInputs();}};
 $('pstat').onclick=e=>{if(e.target.id==='pdel'){delete DB.plans[S.tdate].plan;persist();RES=null;$('result').innerHTML='';updatePlanStatus();renderBookHead();}};
-$('sample').onclick=()=>{
-  const k=Math.floor(Math.random()*4),cl=new Set();while(cl.size<k)cl.add(TR[Math.floor(Math.random()*15)]);
-  S.open={};S.inOpen={};TR.forEach(t=>{S.open[t]=!cl.has(t);S.inOpen[t+1]=S.open[t];});
-  const tot=(15-k)*CAP,w=CO.map(()=>.5+Math.random()),ws=w.reduce((a,b)=>a+b,0);
-  S.q=w.map(x=>Math.floor(tot*x/ws));S.q[Math.floor(Math.random()*4)]+=tot-sums();
-  S.st=Math.floor(Math.random()*4);S.sn=Math.floor(Math.random()*4);S.stAuto=false;
-  S.edited=true;save();clearRes();buildInputs();renderTrains();updateQnote();
-};
+$('nOpen').onchange=e=>setOpenCount(e.target.value);
+$('lineCopy').onclick=()=>copy($('lineTxt').textContent,'คัดลอกข้อความส่ง LINE แล้ว');
 $('go').onclick=()=>{RES=null;recompute(false);};
 function recompute(rand){
   const prev=RES,go=$('go'),ol=prev?prev.ol:openList(),locks=prev?prev.locks:{};
@@ -505,16 +537,16 @@ function recompute(rand){
     const vs=solve(ol.length,q,st,sn,ol.map(t=>locks[t]||null));
     go.textContent='จัดตารางเปิดจอง';renderValid();
     if(!vs){if(prev)flash('ไม่พบแผนที่เข้ากับขบวนที่ล็อกไว้');else $('result').innerHTML='<div class="sec text-sm text-red-600">ไม่พบแผนที่เป็นไปได้ กรุณาปรับโควตาหรือขบวนที่เปิดจอง</div>';return;}
-    RES={vs,cur:0,ol,inOpen,q,st,sn,locks,date,edit:null};
+    RES={vs,cur:0,ol,inOpen,q,st,sn,locks,date,edit:null,saved:false};
     if(rand&&vs.length>1)RES.cur=1+Math.floor(Math.random()*(vs.length-1));
     renderResult();
   },30);
 }
-function setRows(rows,desc){RES.vs[RES.cur]={rows,desc};renderResult();}
+function setRows(rows,desc){RES.vs[RES.cur]={rows,desc};RES.saved=false;renderResult();}
 function swapRows(i,j){
   const L=RES.locks,ol=RES.ol;if(i===j||L[ol[i]]||L[ol[j]])return;
   const r=RES.rows.slice();[r[i],r[j]]=[r[j],r[i]];RES.edit=null;
-  setRows(r,`ปรับตำแหน่งเอง (อิงรูปแบบที่ ${RES.cur+1})`);
+  setRows(r,`ปรับตำแหน่งเอง (อิงแบบที่ ${RES.cur+1})`);
 }
 function moveRow(i,d){const L=RES.locks,ol=RES.ol;if(L[ol[i]])return;let j=i+d;while(j>=0&&j<ol.length&&L[ol[j]])j+=d;if(j>=0&&j<ol.length)swapRows(i,j);}
 function editorHtml(i,r){
@@ -528,13 +560,16 @@ function applyEdit(i,ed){
   const sum=v.reduce((a,b)=>a+b,0);
   if(sum>CAP){flash(`ผลรวมเกินความจุขบวน ${CAP} แคร่`);renderResult();return;}
   const rows=RES.rows.slice();rows[i]=v;const t=RES.ol[i];if(RES.locks[t])RES.locks[t]=v.slice();
-  setRows(rows,`ปรับแก้สัดส่วนเอง (อิงรูปแบบที่ ${RES.cur+1})`);
+  setRows(rows,`ปรับแก้สัดส่วนเอง (อิงแบบที่ ${RES.cur+1})`);
+}
+function savePlan(){
+  const R=RES;(DB.plans[R.date]=DB.plans[R.date]||{}).plan={ol:R.ol.slice(),inOpen:(R.inOpen||R.ol.map(t=>t+1)).slice(),rows:R.rows.map(r=>r.slice()),q:R.q.slice(),st:R.st,sn:R.sn,locks:R.locks};
+  R.saved=true;persist();flash('บันทึกแผนเปิดจองแล้ว');renderResult();
 }
 function renderResult(){
   const cv=RES.vs[RES.cur];
   Object.assign(RES,{rows:cv.rows},analyze(cv.rows,RES.ol,RES.q,RES.st,RES.sn,RES.locks));
   RES.first=RES.st;
-  (DB.plans[RES.date]=DB.plans[RES.date]||{}).plan={ol:RES.ol.slice(),inOpen:(RES.inOpen||RES.ol.map(t=>t+1)).slice(),rows:RES.rows.map(r=>r.slice()),q:RES.q.slice(),st:RES.st,sn:RES.sn,locks:RES.locks};persist();
   const R=RES,L=R.locks,nl=Object.keys(L).length,inO=R.inOpen||R.ol.map(t=>t+1);
   const list=TR.map(t=>{const i=R.ol.indexOf(t),ti=t+1,inOn=inO.includes(ti);
     let left,right;
@@ -553,8 +588,11 @@ function renderResult(){
   $('result').innerHTML=`<div class="space-y-5">
    <section class="sec">
      <div class="lbl">แผนเปิดจอง · วัน${DAYS[wIdx(R.date)]} ${short(R.date)}</div>
-     <div class="no-print flex flex-wrap items-center gap-2 mb-3">${R.vs.map((v,i)=>`<button data-a="v" data-i="${i}" class="pill ${i===R.cur?'on':''}">รูปแบบที่ ${i+1}</button>`).join('')}</div>
-     <div class="text-xs text-slate-400 mb-3">รูปแบบที่ ${R.cur+1}/${R.vs.length}${R.cur===0&&R.vs.length>1?' (แนะนำ)':''} — ${cv.desc} · <span class="text-emerald-600">บันทึกเป็นคิวสินค้าแล้ว</span></div>
+     <div class="no-print flex flex-wrap items-center gap-2 mb-3">${R.vs.map((v,i)=>`<button data-a="v" data-i="${i}" class="pill ${i===R.cur?'on':''}">แบบที่ ${i+1}</button>`).join('')}</div>
+     <div class="text-xs text-slate-400 mb-3">แบบที่ ${R.cur+1}/${R.vs.length}${R.cur===0&&R.vs.length>1?' (แนะนำ)':''} — ${cv.desc}</div>
+     <div class="no-print flex flex-wrap items-center gap-2 mb-3"><button class="btn btn-dark" data-a="saveplan">บันทึกแผนเปิดจอง</button>
+       <button class="btn" data-a="gs" ${R.saved&&!S.quotaDirty?'':'disabled'}>บันทึกลง Google Sheets</button><button class="btn" data-a="ws" ${R.saved?'':'disabled'}>ดูใบงาน (.PNG)</button>
+       <span id="bGsStat" class="text-xs ${R.saved?'text-emerald-600':'text-amber-600'}">${R.saved?'✓ บันทึกแผนเปิดจองแล้ว':'⚠ ยังไม่ได้บันทึกแผน — กด "บันทึกแผนเปิดจอง" ก่อนบันทึกลง Google Sheets'}${R.saved&&S.quotaDirty?' · ต้องกด "บันทึกโควตามาตรฐาน" ก่อน':''}</span></div>
      <div class="no-print flex flex-wrap gap-2 mb-3"><button class="btn" data-a="shuf">🔀 สุ่มใหม่</button><button class="btn" data-a="re">คำนวณใหม่</button><button class="btn" data-a="unl">ปลดล็อกทั้งหมด (${nl})</button>
        <span class="flex-1"></span><button class="btn" data-a="line">${ic('copy')} คัดลอกสรุปส่ง LINE</button><button class="btn" data-a="csv">${ic('dl')} Export CSV</button><button class="btn" data-a="print">${ic('print')}</button></div>
      <div class="grid grid-cols-2 gap-3 text-sm font-semibold border-b border-slate-200 pb-1"><div>ขาออก</div><div>ขาเข้า (คู่กับขาออก)</div></div>
@@ -565,7 +603,7 @@ function renderResult(){
   updatePlanStatus();renderBookHead();
 }
 $('result').onclick=e=>{const b=e.target.closest('[data-a]');if(!b||!RES)return;const a=b.dataset.a,i=+b.dataset.i;
-  if(a==='v'){RES.cur=i;RES.edit=null;renderResult();}
+  if(a==='v'){RES.cur=i;RES.edit=null;RES.saved=false;renderResult();}
   else if(a==='up')moveRow(i,-1);else if(a==='down')moveRow(i,1);
   else if(a==='edit'){RES.edit=RES.edit===i?null:i;renderResult();}
   else if(a==='edone'){RES.edit=null;renderResult();}
@@ -574,10 +612,13 @@ $('result').onclick=e=>{const b=e.target.closest('[data-a]');if(!b||!RES)return;
     else{RES.locks[t]=RES.rows[i].slice();const cur=RES.rows;
       RES.vs=RES.vs.filter(v=>RES.ol.every((tt,j)=>!RES.locks[tt]||v.rows[j].join()===RES.locks[tt].join()));
       RES.cur=Math.max(0,RES.vs.findIndex(v=>v.rows===cur));}
-    renderResult();}
-  else if(a==='shuf'){RES.edit=null;if(RES.vs.length>1){let j;do{j=Math.floor(Math.random()*RES.vs.length)}while(j===RES.cur);RES.cur=j;renderResult();}else recompute(true);}
+    RES.saved=false;renderResult();}
+  else if(a==='shuf'){RES.edit=null;RES.saved=false;if(RES.vs.length>1){let j;do{j=Math.floor(Math.random()*RES.vs.length)}while(j===RES.cur);RES.cur=j;renderResult();}else recompute(true);}
   else if(a==='re'){RES.edit=null;recompute(false);}
-  else if(a==='unl'){RES.locks={};renderResult();}
+  else if(a==='unl'){RES.locks={};RES.saved=false;renderResult();}
+  else if(a==='saveplan')savePlan();
+  else if(a==='gs'){sendSheetsFor(RES.date,$('bGsStat')).then(ok=>{if(ok)openWs(RES.date,'book');});}
+  else if(a==='ws')openWs(RES.date,'book');
   else if(a==='line')copy(bookLine(),'คัดลอกสรุปยอดจองแล้ว');
   else if(a==='csv')downloadCsv(bookCsv(),'booking-plan-'+RES.date+'.csv');else if(a==='print')window.print();};
 $('result').onchange=e=>{const ed=e.target.closest&&e.target.closest('[data-ed]');if(ed&&RES)applyEdit(+ed.dataset.ed,ed);};
@@ -630,6 +671,10 @@ function renderAct(){
   const D=S.adate;setDate('adate',D);
   const QO=runQueue(D,'out'),QI=runQueue(D,'in'),pl=planOf(D),custom=!!(DB.actual[D]&&(DB.actual[D].open||DB.actual[D].inOpen));
   $('atrains').innerHTML=pairPills(t=>QO.ol.includes(t),t=>QI.ol.includes(t),'data-at','data-ati');
+  const savedA=!!(DB.actual[D]&&DB.actual[D].saved);
+  $('nOpenA').value=QO.ol.length;
+  $('aSendGs').disabled=!savedA||S.quotaDirty;
+  $('aStat').innerHTML=savedA?'<span class="text-emerald-600">✓ บันทึกแผนเดินรถจริงแล้ว</span>'+(S.quotaDirty?' <span class="text-amber-600">· ต้องกด "บันทึกโควตามาตรฐาน" ก่อนส่ง Google Sheets</span>':''):'<span class="text-amber-600">⚠ ยังไม่ได้บันทึกแผนเดินรถจริง — กด "บันทึกแผนเดินรถจริง" ก่อนบันทึกลง Google Sheets</span>';
   $('ainfo').innerHTML=`เปิดจองไว้ ขาออก <b>${pl?pl.ol.length:0}</b> / ขาเข้า <b>${pl?(pl.inOpen||pl.ol.map(t=>t+1)).length:0}</b> · เดินจริง ขาออก <b>${QO.ol.length}</b> / ขาเข้า <b>${QI.ol.length}</b> ขบวน · สินค้าในคิว ขาออก <b>${QO.queue.length}</b> / ขาเข้า <b>${QI.queue.length}</b> ล็อต${custom?'':' <span class="text-slate-400">(ใช้ค่าเริ่มต้นตามแผนจอง)</span>'}`;
   if(!QO.ol.length&&!QI.ol.length){ACT=null;$('aresult').innerHTML=`<div class="sec text-sm text-slate-500">${QO.queue.length||QI.queue.length?'ยังไม่ได้เลือกขบวนเดินจริง':'ยังไม่มีสินค้าในคิว (ยังไม่มีแผนเปิดจองสำหรับวันนี้หรือก่อนหน้า)'}</div>`;return;}
   const asO=QO.ol.map((t,i)=>QO.queue[i]||null),carryO=QO.queue.slice(QO.ol.length);
@@ -657,8 +702,14 @@ $('atrains').onclick=e=>{const b=e.target.closest('button');if(!b)return;const D
   if(b.dataset.at){const t=+b.dataset.at,on=!curO.has(t);on?curO.add(t):curO.delete(t);on?curI.add(t+1):curI.delete(t+1);}   // งดขาออก = งดขาเข้าคู่กัน
   else if(b.dataset.ati){const t=+b.dataset.ati;curI.has(t)?curI.delete(t):curI.add(t);}                                     // ข้อยกเว้นเฉพาะขาเข้า
   else return;
-  DB.actual[D]={open:TR.filter(x=>curO.has(x)),inOpen:INB.filter(x=>curI.has(x))};persist();renderAct();};
+  DB.actual[D]={open:TR.filter(x=>curO.has(x)),inOpen:INB.filter(x=>curI.has(x)),saved:false};persist();renderAct();};
 $('areset').onclick=()=>{delete DB.actual[S.adate];persist();renderAct();};
+$('nOpenA').onchange=e=>{const N=Math.max(0,Math.min(15,parseInt(e.target.value)||0)),D=S.adate;
+  DB.actual[D]={open:TR.filter((t,i)=>i<N),inOpen:INB.filter((t,i)=>i<N),saved:false};persist();renderAct();};
+$('aSavePlan').onclick=()=>{const D=S.adate;DB.actual[D]={open:runQueue(D,'out').ol.slice(),inOpen:runQueue(D,'in').ol.slice(),saved:true};persist();flash('บันทึกแผนเดินรถจริงแล้ว');renderAct();};
+$('aSendGs').onclick=async()=>{const D=S.adate;const ok=await sendSheetsFor(D,$('aStat'));if(!ok)return;
+  const F=formData(D,'plan');if(F.pl&&F.dev)openWs(D,'train');else flash('วันนี้ไม่มีการเหลื่อมขบวน จึงไม่มีใบงานรถไฟ');};
+$('aViewWs').onclick=()=>{const F=formData(S.adate,'train');if(F.pl&&F.dev)openWs(S.adate,'train');else flash('วันนี้ไม่มีการเหลื่อมขบวน จึงไม่มีใบงานรถไฟ');};
 function actLine(){
   const A=ACT,D=A.date;let s=`🚆 แผนเดินรถจริง ${fmt(D)}\nขาออก\n`;
   TR.forEach(t=>{const i=A.ol.indexOf(t);
@@ -701,7 +752,8 @@ function renderWeek(){
   <div class="overflow-x-auto"><table class="w-full text-sm mt-4"><thead class="text-xs text-slate-400"><tr><th class="text-left font-normal pb-2">วัน</th>${CO.map((c,i)=>`<th class="font-normal pb-2"><i class="inline-block w-2 h-2 rounded-full mr-1" style="background:var(--c${i})"></i>${c}</th>`).join('')}<th class="font-normal pb-2 text-right">รวม</th></tr></thead>
   <tbody>${DAYS.map((d,di)=>`<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 whitespace-nowrap">${d}</td>${CO.map((c,ci)=>`<td class="px-1 py-1"><input data-w="${di},${ci}" type="number" min="0" inputmode="numeric" value="${P.week[di][ci]}" class="inp text-center" style="padding:5px 6px"></td>`).join('')}<td class="py-1.5 text-right whitespace-nowrap" id="ws${di}"></td></tr>`).join('')}</tbody></table></div>
   <div class="mt-4 flex flex-wrap items-center gap-3"><button class="btn" id="loadDef">โหลดค่าเริ่มต้นตัวอย่าง</button><button class="btn btn-dark" id="qSave">บันทึกโควตามาตรฐาน</button><span id="qSaveStat" class="text-xs"></span></div>
-  <div class="mt-6"><div class="lbl">เชื่อมต่อ Google Sheets</div><input id="gsUrl" class="inp" placeholder="ลิงก์ Web App URL (https://script.google.com/macros/s/.../exec)" value="${esc(S.gsUrl)}"></div>`;
+  <div class="mt-6"><div class="lbl">เชื่อมต่อ Google Sheets</div><input id="gsUrl" class="inp" placeholder="ลิงก์ Web App URL (https://script.google.com/macros/s/.../exec)" value="${esc(S.gsUrl)}">
+    <div class="flex flex-wrap items-center gap-2 mt-3"><button class="btn" id="syncPull">ดึงข้อมูลล่าสุดจาก Google Sheets</button><button class="btn" id="syncPush">ส่งข้อมูลซิงค์ขึ้น Google Sheets</button><span id="syncStat" class="text-xs text-slate-400"></span></div></div>`;
   updateWeekSums();updateQSave();
 }
 function updateQSave(){const el=$('qSaveStat');if(el)el.innerHTML=S.quotaDirty?'<span class="text-amber-600">⚠ ยังไม่ได้บันทึก — ต้องกด "บันทึกโควตามาตรฐาน" ก่อนส่งข้อมูลเข้า Google Sheets</span>':'<span class="text-emerald-600">✓ บันทึกโควตามาตรฐานแล้ว</span>';}
@@ -714,7 +766,9 @@ $('weekTbl').oninput=e=>{const t=e.target,d=t.dataset;
   else if(t.id==='gsUrl'){S.gsUrl=t.value.trim();persist();}};
 $('weekTbl').onchange=e=>{if(e.target.id==='pSel'){S.pSel=e.target.value;persist();renderWeek();}};
 $('weekTbl').onclick=e=>{const id=e.target.closest('button')&&e.target.closest('button').id;
-  if(id==='qSave'){S.quotaDirty=false;persist();updateQSave();flash('บันทึกโควตามาตรฐานแล้ว');}
+  if(id==='syncPull')pullState(true);
+  else if(id==='syncPush')pushState(true);
+  else if(id==='qSave'){S.quotaDirty=false;persist();updateQSave();flash('บันทึกโควตามาตรฐานแล้ว');}
   else if(id==='loadDef'){curP().week=DEFWEEK.map(r=>r.slice());renderWeek();weekChanged();flash('โหลดค่าเริ่มต้นตัวอย่างแล้ว');}
   else if(id==='pAdd'){const n={id:'p'+Date.now(),name:'รอบใหม่',from:'',to:'',week:curP().week.map(r=>r.slice())};S.periods.push(n);S.pSel=n.id;renderWeek();weekChanged();}
   else if(id==='pDel'&&S.periods.length>1){S.periods=S.periods.filter(p=>p.id!==S.pSel);S.pSel=S.periods[0].id;renderWeek();weekChanged();}};
@@ -769,18 +823,18 @@ function formData(D,mode){
   return {D,mode,pl,out,inb,pick,so,si,tot,dev,openOut,openIn,first:pl?pl.st:autoStart(D).st,QO,QI};
 }
 const GREYBG='#F2F2F2',BOOKBG='#E8F5E9',BOOKH='#C8E6C9',ACTBG='#FFEBEE',ACTH='#FFCDD2',NAVYC='#000080',RED_='#FF0000';
-function sumTable(label,s,show,first){
+function sumTable(label,s,show,first,compact){
   const NAVY='color:#000080;',RED='color:#FF0000;',C='color:#000;';
   const col=d=>d>0?'#008000':d<0?'#FF0000':'#000';
   const dif=(l,b)=>{const d=r1(l-b);return `<span style="color:${col(d)}">${d>0?'+':''}${nfmt(d)}</span>`;};
   const has=s.loadSum>0,sm=a=>r1(a.reduce((x,y)=>x+y,0));
-  const td='padding:2px 4px;text-align:center;vertical-align:middle;font-size:12px;';
-  const row=CO.map((nm,c)=>`<tr><td style="${td}"></td><td style="${td}${C}${c===first?'background:#FFFF00;':''}">${nm}</td><td style="${td}${C}">${s.base[c]}</td><td style="${td}${C}">${s.min65[c]}</td><td style="${td}${NAVY}">${s.quota[c]}</td><td style="${td}${NAVY}">${s.book[c]}</td><td style="${td}${RED}">${has?nfmt(s.load[c]):''}</td><td style="${td}">${has?dif(s.load[c],s.book[c]):''}</td></tr>`).join('');
-  const tot=`<tr style="${RED}font-weight:700"><td style="${td}"></td><td style="${td}">รวม</td><td style="${td}">${sm(s.base)}</td><td style="${td}">${sm(s.min65)}</td><td style="${td}">${sm(s.quota)}</td><td style="${td}">${sm(s.book)}</td><td style="${td}">${has?nfmt(sm(s.load)):'บทต.'}</td><td style="${td}color:#000;font-weight:700">บทต.</td></tr>`;
+  const td='padding:2px 4px;text-align:center;vertical-align:middle;font-size:14px;';
+  const row=CO.map((nm,c)=>`<tr><td style="${td}"></td><td style="${td}${C}${c===first?'background:#FFFF00;':''}">${nm}</td><td style="${td}${C}">${s.base[c]}</td><td style="${td}${C}">${s.min65[c]}</td><td style="${td}${NAVY}">${s.quota[c]}</td><td style="${td}${NAVY}">${s.book[c]}</td>${compact?'':`<td style="${td}${RED}">${has?nfmt(s.load[c]):''}</td><td style="${td}">${has?dif(s.load[c],s.book[c]):''}</td>`}</tr>`).join('');
+  const tot=`<tr style="${RED}font-weight:700"><td style="${td}"></td><td style="${td}">รวม</td><td style="${td}">${sm(s.base)}</td><td style="${td}">${sm(s.min65)}</td><td style="${td}">${sm(s.quota)}</td><td style="${td}">${sm(s.book)}</td>${compact?'':`<td style="${td}">${has?nfmt(sm(s.load)):'บทต.'}</td><td style="${td}color:#000;font-weight:700">บทต.</td>`}</tr>`;
   const hd=(t,c,w)=>`<td style="${td}font-weight:700;${c||C}${w?'width:'+w+'px;':''}">${t}</td>`;
-  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;${show?'':'visibility:hidden'}"><thead><tr>${hd(label,C,66)}${hd('บริษัท',C,46)}${hd('โควตา<br>15 ขบวน',C,58)}${hd('ขั้นต่ำ<br>65%',C,50)}${hd('โควตา',NAVY,50)}${hd('จอง',NAVY,46)}${hd('ขึ้นจริง',RED,52)}${hd('ขึ้นแทน/งดเดิน',C)}</tr></thead><tbody>${row}${tot}</tbody></table>`;
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;${show?'':'visibility:hidden'}"><thead><tr>${hd(label,C,66)}${hd('บริษัท',C,46)}${hd('โควตา<br>15 ขบวน',C,62)}${hd('ขั้นต่ำ<br>65%',C,52)}${hd('โควตา',NAVY,52)}${hd('จอง',NAVY,48)}${compact?'':hd('ขึ้นจริง',RED,52)+hd('ขึ้นแทน/งดเดิน',C)}</tr></thead><tbody>${row}${tot}</tbody></table>`;
 }
-const BASE='border:1px solid #000;color:#000;padding:1px 3px;text-align:center;vertical-align:middle;font-size:12px;background:#fff;';
+const BASE='border:1px solid #000;color:#000;padding:1px 3px;text-align:center;vertical-align:middle;font-size:14px;background:#fff;';
 const th=(t,extra,attrs)=>`<th ${attrs||''} style="${BASE}font-weight:700;padding:3px;background:${GREYBG};${extra||''}">${t}</th>`;
 function sideTable(rows,isOut,F,pairN,st){
   const RED2='2px solid #dc2626',pick=F.pick,mode=F.mode;
@@ -823,30 +877,37 @@ function sideTable(rows,isOut,F,pairN,st){
     <tr style="height:22px"><td colspan="2" style="${rs}">Load Factor</td><td colspan="2" style="${rs}">${qT?'100.0':'0.0'}</td><td colspan="2" style="${rs}">${lfB}</td><td colspan="2" style="${rs}">${lfA}</td><td style="${rs}"></td></tr>`;
   return `<table style="width:100%;border-collapse:collapse;table-layout:fixed">${head}<tbody>${body}${foot}</tbody></table>`;
 }
-function renderForm(){
-  const D=S.fdate,mode=S.fmode;setDate('fdate',D);
-  const F=formData(D,mode),cap=Number(S.cap)||35,st=FORM_STATIC,pick=F.pick;
-  $('fmode').innerHTML=[['plan','แผนเปิดจอง'],['train','แผนเดินรถไฟจริง (ชีทรถไฟ)']].map(([k,t])=>`<button data-fm="${k}" class="pill ${k===mode?'on':''}">${t}</button>`).join('');
-  $('fdev').innerHTML=!F.pl?'ยังไม่มีแผนเปิดจองของวันนี้':F.dev?'<span class="text-amber-600">พบการเหลื่อมขบวน/เดินไม่ตรงแผนจอง → ระบบจะสร้างชีท "รถไฟ" ใน Google Sheets</span>':'<span class="text-emerald-600">เดินตรงตามแผนจอง → ไม่ต้องสร้างชีท "รถไฟ" (กรอกบรรทุกจริงในชีทวันที่ปกติ)</span>';
-  const pairN=F.out.map((o,i)=>{const a=F.inb[i],ln=x=>pick(x).closed?0:pick(x).book.length;return Math.max(3,o.std.length,ln(o),ln(a),o.load.length,a.load.length);});
+const PAPER_FONT="'TH Sarabun New','TH SarabunPSK','Sarabun','Noto Sans Thai',sans-serif";
+function paperHtml(D,mode,o){
+  o=o||{};const st=!!o.static,variant=o.variant||'full';
+  const F=formData(D,mode),cap=Number(S.cap)||35,pick=F.pick;
+  const pairN=F.out.map((x,i)=>{const a=F.inb[i],ln=y=>pick(y).closed?0:pick(y).book.length;return Math.max(3,x.std.length,ln(x),ln(a),x.load.length,a.load.length);});
   const wd=DAYS[wIdx(D)],lf=F.tot.std?(F.tot.book/F.tot.std*100):0;
-  const card=(t,v,c)=>`<div style="border:1px solid #000;padding:6px 10px;text-align:center"><div style="font-size:12px;color:#000">${t}</div><div style="font-size:22px;font-weight:800;color:${c||'#000'}">${v}</div></div>`;
+  const card=(t,v,c)=>`<div style="border:1px solid #000;padding:6px 10px;text-align:center"><div style="font-size:14px;color:#000">${t}</div><div style="font-size:24px;font-weight:800;color:${c||'#000'}">${v}</div></div>`;
   const capIn=st?`<b>${cap}</b>`:`<input id="capIn" type="number" min="1" value="${cap}" class="inp" style="width:56px;display:inline-block;padding:2px 6px;text-align:center">`;
-  const cards=st?'':`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">${card('โควตารวม',F.tot.std)}${card('จองรวม',F.tot.book,'#075985')}${card('บรรทุกจริง',F.tot.load?nfmt(F.tot.load):'-','#c2410c')}${card('Load Factor %',lf.toFixed(1),lf<65?'#dc2626':'#047857')}</div>`;
-  $('formArea').innerHTML=`<div id="formPaper" style="background:#fff;color:#000;padding:14px;width:${FW}px;position:relative;text-align:center">
-    ${mode==='train'?'<div style="position:absolute;right:16px;top:10px;color:#dc2626;font-weight:800;font-size:24px">รถไฟ</div>':''}
-    <div style="font-size:14px;color:#000;text-align:right;margin-right:${mode==='train'?'74px':'0'}">ทำการจองเมื่อวันที่ ${shortBE(bookingDateOf(D))}</div>
-    <h2 style="text-align:center;font-weight:800;font-size:26px;margin:6px 0;color:#000">บันทึกการจองแคร่ประจำวัน<span style="color:#dc2626">${wd}ที่ ${shortBE(D)}</span></h2>
+  const cards=(variant==='full'&&!st)?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">${card('โควตารวม',F.tot.std)}${card('จองรวม',F.tot.book,'#075985')}${card('บรรทุกจริง',F.tot.load?nfmt(F.tot.load):'-','#c2410c')}${card('Load Factor %',lf.toFixed(1),lf<65?'#dc2626':'#047857')}</div>`:'';
+  const showSum=variant!=='train',compact=variant==='book',showFoot=variant==='full';
+  const trainLabel=mode==='train'&&variant!=='book';
+  const sumOut=showSum?`<div style="margin-top:10px">${sumTable('โควตาขาออก',F.so,true,F.first,compact)}</div>`:'';
+  const sumIn=showSum?`<div style="margin-top:10px">${sumTable('โควตาขาเข้า',F.si,compact?false:F.si.loadSum>0,F.first,compact)}</div>`:'';
+  const footOut=showFoot?`<div style="font-size:15px;margin-top:8px;color:#000;text-align:left">${capIn} บทต. <b>${F.openOut}</b> ขบวน รวม <b>${nfmt(F.openOut*cap)}</b> บทต.<br><span style="display:inline-block;border-bottom:4px double #000;margin-top:4px">รวม <b>${F.openOut}</b> ขบวน จำนวน <b>${nfmt(F.openOut*cap)}</b> บทต.</span></div>`:'';
+  const footIn=showFoot?`<div style="font-size:15px;margin-top:8px;color:#000;text-align:left;${F.si.loadSum>0?'':'visibility:hidden'}">เปิดเดิน <b>${F.openIn}</b> ขบวนๆ ละ <b>${cap}</b> บทต. รวม <b>${nfmt(F.openIn*cap)}</b> บทต.</div>`:'';
+  return `<div id="formPaper" style="background:#fff;color:#000;padding:16px;width:${FW}px;position:relative;text-align:center;font-family:${PAPER_FONT};box-sizing:border-box">
+    <div style="font-size:18px;color:#000;text-align:right">ทำการจองเมื่อวันที่ ${shortBE(bookingDateOf(D))}</div>
+    ${trainLabel?`<div style="text-align:right;color:#FF0000;font-weight:800;font-size:30px;line-height:1.1;font-family:${PAPER_FONT}">*รถไฟ*</div>`:''}
+    <h2 style="text-align:center;font-weight:800;font-size:30px;margin:6px 0;color:#000"><span style="font-size:24px">บันทึกการจองแคร่ประจำวัน</span><span style="color:#dc2626">${wd}ที่ ${shortBE(D)}</span></h2>
     ${cards}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#000">ขาออก</div>${sideTable(F.out,true,F,pairN,st)}
-        <div style="margin-top:10px">${sumTable('โควตาขาออก',F.so,true,F.first)}</div>
-        <div style="font-size:13px;margin-top:8px;color:#000;text-align:left">${capIn} บทต. <b>${F.openOut}</b> ขบวน รวม <b>${nfmt(F.openOut*cap)}</b> บทต.<br>
-          <span style="display:inline-block;border-bottom:4px double #000;margin-top:4px">รวม <b>${F.openOut}</b> ขบวน จำนวน <b>${nfmt(F.openOut*cap)}</b> บทต.</span></div></div>
-      <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#000">ขาเข้า</div>${sideTable(F.inb,false,F,pairN,st)}
-        <div style="margin-top:10px">${sumTable('โควตาขาเข้า',F.si,F.si.loadSum>0,F.first)}</div>
-        <div style="font-size:13px;margin-top:8px;color:#000;text-align:left;${F.si.loadSum>0?'':'visibility:hidden'}">เปิดเดิน <b>${F.openIn}</b> ขบวนๆ ละ <b>${cap}</b> บทต. รวม <b>${nfmt(F.openIn*cap)}</b> บทต.</div></div>
+      <div><div style="font-weight:700;font-size:18px;margin-bottom:4px;color:#000">ขาออก</div>${sideTable(F.out,true,F,pairN,st)}${sumOut}${footOut}</div>
+      <div><div style="font-weight:700;font-size:18px;margin-bottom:4px;color:#000">ขาเข้า</div>${sideTable(F.inb,false,F,pairN,st)}${sumIn}${footIn}</div>
     </div></div>`;
+}
+function renderForm(){
+  const D=S.fdate,mode=S.fmode;setDate('fdate',D);
+  const F=formData(D,mode);
+  $('fmode').innerHTML=[['plan','แผนเปิดจอง'],['train','แผนเดินรถไฟจริง (ชีทรถไฟ)']].map(([k,t])=>`<button data-fm="${k}" class="pill ${k===mode?'on':''}">${t}</button>`).join('');
+  $('fdev').innerHTML=!F.pl?'ยังไม่มีแผนเปิดจองของวันนี้':F.dev?'<span class="text-amber-600">พบการเหลื่อมขบวน/เดินไม่ตรงแผนจอง → ระบบจะสร้างชีท "รถไฟ" ใน Google Sheets</span>':'<span class="text-emerald-600">เดินตรงตามแผนจอง → ไม่ต้องสร้างชีท "รถไฟ" (กรอกบรรทุกจริงในชีทวันที่ปกติ)</span>';
+  $('formArea').innerHTML=paperHtml(D,mode,{static:FORM_STATIC,variant:'full'});
   fitForm();
 }
 function fitForm(){
@@ -861,15 +922,35 @@ $('fmode').onclick=e=>{const b=e.target.closest('[data-fm]');if(b){S.fmode=b.dat
 $('formArea').onchange=e=>{const t=e.target,d=t.dataset;
   if(d.ld){(DB.load[S.fdate]=DB.load[S.fdate]||{})[d.ld]=t.value;persist();renderForm();}
   else if(t.id==='capIn'){S.cap=Math.max(1,parseInt(t.value)||35);persist();renderForm();}};
-async function exportPng(){
+const wsName=(D,variant)=>`${parseD(D).getDate()}${variant==='train'?' รถไฟ':''}.png`;      // 23.png / 23 รถไฟ.png
+async function exportVariant(D,variant){
   if(!window.html2canvas){flash('โหลด html2canvas ไม่สำเร็จ (ต้องเชื่อมต่ออินเทอร์เน็ต)');return;}
-  FORM_STATIC=true;renderForm();$('formArea').style.transform='none';await new Promise(r=>setTimeout(r,80));
+  const host=document.createElement('div');host.style.cssText=`position:fixed;left:-99999px;top:0;width:${FW}px;background:#fff`;
+  host.innerHTML=paperHtml(D,variant==='train'?'train':'plan',{static:true,variant});document.body.appendChild(host);
+  const el=host.firstElementChild;el.style.minHeight=Math.round(FW*1.4142)+'px';          // สัดส่วนหน้ากระดาษ A4 แนวตั้ง
   try{
-    const el=$('formPaper'),cv=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true,width:FW,windowWidth:FW+40});
-    const a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download=`บันทึกจองแคร่_${S.fdate}${S.fmode==='train'?'_รถไฟ':''}.png`;document.body.appendChild(a);a.click();a.remove();flash('บันทึกรูปภาพแล้ว');
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    await new Promise(r=>setTimeout(r,120));
+    const cv=await html2canvas(el,{scale:3,backgroundColor:'#ffffff',useCORS:true,width:FW,windowWidth:FW+40});
+    const a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download=wsName(D,variant);document.body.appendChild(a);a.click();a.remove();flash('บันทึกรูปภาพแล้ว: '+wsName(D,variant));
   }catch(err){flash('บันทึกรูปไม่สำเร็จ: '+err.message);}
-  finally{FORM_STATIC=false;renderForm();}
+  finally{host.remove();}
 }
+let WS=null;
+function fitWs(){
+  const fit=$('wsFit'),area=$('wsPaper');if(!fit||!area||fit.clientWidth===0)return;
+  const sc=Math.min(1,fit.clientWidth/FW);area.style.transformOrigin='top left';area.style.transform=sc<1?`scale(${sc})`:'none';fit.style.height=Math.ceil(area.offsetHeight*sc)+'px';
+}
+function openWs(D,variant){
+  WS={D,variant};
+  $('wsTitle').textContent=variant==='train'?`ใบงานรถไฟ · ${fmt(D)}`:`ใบงานแผนเปิดจอง · ${fmt(D)}`;
+  $('wsPaper').innerHTML=paperHtml(D,variant==='train'?'train':'plan',{static:true,variant});
+  $('wsSave').textContent=`บันทึกรูปภาพ (.PNG) — ${wsName(D,variant)}`;
+  $('wsModal').classList.remove('hidden');fitWs();
+}
+$('wsClose').onclick=()=>$('wsModal').classList.add('hidden');
+$('wsSave').onclick=()=>{if(WS)exportVariant(WS.D,WS.variant);};
+window.addEventListener('resize',()=>{if(WS&&!$('wsModal').classList.contains('hidden'))fitWs();});
 function buildPayload(F){
   const D=F.D,d=parseD(D),ms=D.slice(0,8)+'01',me=D.slice(0,8)+pad(new Date(d.getFullYear(),d.getMonth()+1,0).getDate());
   const per=periodFor(D),load={};[F.out,F.inb].forEach(a=>a.forEach(o=>{if(o.load.length)load[o.t]=o.load;}));
@@ -880,18 +961,44 @@ function buildPayload(F){
     out:planDir(F.out,true),inb:planDir(F.inb,false),load,
     summary:{base:F.so.base,min65:F.so.min65,openOut:F.so.quota,openIn:F.si.quota}};
 }
-async function sendSheets(){
-  if(S.quotaDirty){flash('กรุณากด "บันทึกโควตามาตรฐาน" ในส่วนตั้งค่าก่อนส่งข้อมูลเข้า Google Sheets');return;}
-  const url=S.gsUrl;if(!url){flash('กรอก Web App URL ในส่วนตั้งค่าก่อน');return;}
-  const F=formData(S.fdate,'plan'),body=JSON.stringify(buildPayload(F)),st=$('gsstat');st.textContent='กำลังส่งข้อมูล…';
+async function sendSheetsFor(D,el){
+  const say=t=>{if(el)el.innerHTML=t;};
+  if(S.quotaDirty){flash('กรุณากด "บันทึกโควตามาตรฐาน" ในส่วนตั้งค่าก่อนส่งข้อมูลเข้า Google Sheets');return false;}
+  const url=S.gsUrl;if(!url){flash('กรอก Web App URL ในส่วนตั้งค่าก่อน');return false;}
+  const F=formData(D,'plan'),body=JSON.stringify(buildPayload(F));say('กำลังส่งข้อมูล…');
   try{
     const res=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body}),j=await res.json();
-    st.textContent=j.ok?`✓ บันทึกแล้ว: ชีท ${j.sheets.join(', ')} · สินค้าค้างยกยอด ขาออก ${j.carryOut} / ขาเข้า ${j.carryIn} ล็อต${j.train?'':' · ไม่มีการเหลื่อม จึงไม่สร้างชีทรถไฟ'}`:'⚠ '+j.error;
+    if(j.ok){say(`<span class="text-emerald-600">✓ บันทึกแล้ว: ชีท ${j.sheets.join(', ')} · สินค้าค้างยกยอด ขาออก ${j.carryOut} / ขาเข้า ${j.carryIn} ล็อต${j.train?'':' · ไม่มีการเหลื่อม จึงไม่สร้างชีทรถไฟ'}</span>`);pushState(false);return true;}
+    say('<span class="text-red-600">⚠ '+esc(j.error)+'</span>');return false;
   }catch(err){
     try{await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body});
-      st.textContent='ส่งข้อมูลแล้ว (เบราว์เซอร์อ่านผลตอบกลับไม่ได้ กรุณาตรวจใน Google Sheets)';}
-    catch(e2){st.textContent='⚠ ส่งไม่สำเร็จ: '+e2.message;}
+      say('ส่งข้อมูลแล้ว (เบราว์เซอร์อ่านผลตอบกลับไม่ได้ กรุณาตรวจใน Google Sheets)');pushState(false);return true;}
+    catch(e2){say('<span class="text-red-600">⚠ ส่งไม่สำเร็จ: '+esc(e2.message)+'</span>');return false;}
   }
+}
+/* ----- Two-way sync: ส่ง/ดึงสถานะระหว่างเครื่องผ่าน Google Sheets (doPost action=push / doGet ?action=state) ----- */
+const stateSnapshot=()=>({plans:DB.plans,actual:DB.actual,load:DB.load,periods:S.periods,colors:S.colors,cap:S.cap,updatedAt:S.localAt||Date.now()});
+async function pushState(show){
+  const url=S.gsUrl;if(!url)return;
+  try{await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'push',state:stateSnapshot()})});
+    if(show){flash('ส่งข้อมูลซิงค์ขึ้น Google Sheets แล้ว');const el=$('syncStat');if(el)el.textContent='ส่งล่าสุด '+new Date().toLocaleTimeString('th-TH');}}
+  catch(e){if(show)flash('ส่งข้อมูลซิงค์ไม่สำเร็จ');}
+}
+async function pullState(show){
+  const url=S.gsUrl;if(!url)return;
+  try{
+    const res=await fetch(url+(url.indexOf('?')>=0?'&':'?')+'action=state'),j=await res.json();
+    if(!j.ok||!j.state){if(show)flash('ยังไม่มีข้อมูลซิงค์ใน Google Sheets');return;}
+    const r=j.state;
+    if(show||(r.updatedAt||0)>(S.localAt||0)){
+      DB.plans=r.plans||{};DB.actual=r.actual||{};DB.load=r.load||{};
+      if(r.periods&&r.periods.length){S.periods=r.periods;S.pSel=S.periods[0].id;}
+      if(r.colors)S.colors=r.colors;if(r.cap)S.cap=r.cap;
+      S.localAt=r.updatedAt||Date.now();S.quotaDirty=false;persist(true);
+      applyColors();renderWeek();if(S.tdate)loadEditor(S.tdate);renderBook();if(S.tab==='act')renderAct();if(S.tab==='form')renderForm();
+      flash('ดึงข้อมูลซิงค์ล่าสุดแล้ว');
+    }else if(show)flash('ข้อมูลในเครื่องใหม่กว่าหรือเท่ากันอยู่แล้ว');
+  }catch(e){if(show)flash('ดึงข้อมูลซิงค์ไม่สำเร็จ');}
 }
 function exportXls(){
   if(!window.XLSX){flash('โหลด SheetJS ไม่สำเร็จ (ต้องเชื่อมต่ออินเทอร์เน็ต)');return;}
@@ -904,21 +1011,18 @@ function exportXls(){
   XLSX.writeFile(wb,`บันทึกจองแคร่_${S.fdate}.xlsx`);
 }
 document.getElementById('pForm').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;const f=b.dataset.f;
-  if(f==='png')exportPng();else if(f==='gs')sendSheets();else if(f==='xls')exportXls();else if(f==='print')window.print();};
+  if(f==='png')exportVariant(S.fdate,S.fmode==='train'?'train':'book');else if(f==='gs')sendSheetsFor(S.fdate,$('gsstat'));else if(f==='xls')exportXls();else if(f==='print')window.print();};
 
 /* ----- ปุ่ม "เปิดเดินทั้งหมด" (ขาออก 15 + ขาเข้า 15) ----- */
 document.addEventListener('click',e=>{
-  const b=e.target.closest&&e.target.closest('[data-all]');if(!b)return;const w=b.dataset.all;
+  const b=e.target.closest&&e.target.closest('[data-all]');if(!b)return;const on=b.dataset.all==='on';
   if(b.dataset.ctx==='book'){
     if(!S.tdate)return;
-    if(w!=='in')TR.forEach(t=>{S.open[t]=true;});
-    if(w!=='out')INB.forEach(t=>{S.inOpen[t]=true;});
-    rescale();save();clearRes();renderTrains();syncQuota();flash('เปิดเดินทั้งหมดแล้ว');
+    TR.forEach(t=>{S.open[t]=on;});INB.forEach(t=>{S.inOpen[t]=on;});
+    rescale();save();clearRes();renderTrains();syncQuota();flash(on?'เปิดเดินทั้งหมดแล้ว':'งดเดินทั้งหมดแล้ว');
   }else{
-    const D=S.adate,o=new Set(runQueue(D,'out').ol),i=new Set(runQueue(D,'in').ol);
-    if(w!=='in')TR.forEach(t=>o.add(t));
-    if(w!=='out')INB.forEach(t=>i.add(t));
-    DB.actual[D]={open:TR.filter(x=>o.has(x)),inOpen:INB.filter(x=>i.has(x))};persist();renderAct();flash('เปิดเดินทั้งหมดแล้ว');
+    const D=S.adate;
+    DB.actual[D]={open:on?TR.slice():[],inOpen:on?INB.slice():[],saved:false};persist();renderAct();flash(on?'เปิดเดินทั้งหมดแล้ว':'งดเดินทั้งหมดแล้ว');
   }
 });
 
@@ -927,6 +1031,7 @@ setDate('bdate',S.bdate);setDate('adate',S.adate);setDate('fdate',S.fdate);
 {const t=targets(S.bdate);if(!t.includes(S.tdate))S.tdate=t[0]||null;}
 if(S.tdate)loadEditor(S.tdate);
 applyColors();renderWeek();renderBook();setTab(S.tab||'book');
+if(S.gsUrl)pullState(false);
 </script>
 </body>
 </html>
